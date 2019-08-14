@@ -1,8 +1,6 @@
 <?php
 
 /**
- * Diagnostics controller
- *
  * @category   Webinterpret
  * @package    Webinterpret_Connector
  * @author     Webinterpret Team <info@webinterpret.com>
@@ -15,11 +13,13 @@ class Webinterpret_Connector_DiagnosticsController extends Mage_Core_Controller_
         try {
             Webinterpret_Connector_Helper_Verifier::verifyRequestWebInterpretSignature();
             $this->handleDiagnosticsRequest();
+        } catch (Webinterpret_Connector_Model_SignatureException $e) {
+            header('HTTP/1.0 403 Forbidden');
+            echo $e->getMessage();
         } catch (\Exception $e) {
             echo $e->getMessage();
-            die();
         }
-        die();
+        die;
     }
 
     /**
@@ -27,7 +27,7 @@ class Webinterpret_Connector_DiagnosticsController extends Mage_Core_Controller_
      */
     private function handleDiagnosticsRequest()
     {
-        $statusApiConfigurator = new \WebInterpret\Toolkit\StatusApi\StatusApiConfigurator(Mage::app(), Mage::getConfig());
+        $statusApiConfigurator = new Webinterpret_Connector_StatusApi_StatusApiConfigurator(Mage::app(), Mage::getConfig());
 
         $statusApi = $statusApiConfigurator->getExtendedStatusApi();
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Default helper
  *
@@ -23,84 +24,24 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
         Mage::getConfig()->saveConfig('webinterpret_connector/installation_mode', 0);
     }
 
-    public function installBridgeHelper()
+    public function getEnvConfig()
     {
-        $repo = Mage::getStoreConfig('webinterpret_connector/file_repository');
-        $dir = $this->getModuleBridgeDir();
-
-        // Install helper.php
-        $remoteFile = $repo . DS . 'bridge2cart' . DS . $this->getExtensionVersion() . DS . 'helper.php';
-        $contents = $this->downloadFile($remoteFile);
-        if ($contents === false) {
-            return false;
-        }
-        $localFile = $dir . DS . 'helper.php';
-        $contents = str_replace('exit();', '', $contents);
-        if (@file_put_contents($localFile, $contents) === false) {
-            return false;
-        }
-
-        return true;
-    }
-
-    public function downloadFile($url, $timeout = 10)
-    {
-        try {
-            $method = $this->getDownloadMethod();
-
-            if ($method == 'stream') {
-                $ctx = stream_context_create(array(
-                    'http'=>
-                        array(
-                            'timeout' => $timeout,
-                        ),
-                    'https'=>
-                        array(
-                            'timeout' => $timeout,
-                        ),
-                    )
-                );
-                $contents = @file_get_contents($url, false, $ctx);
-                if ($contents !== false) {
-                    return $contents;
-                }
+        foreach (array(
+            __DIR__ . '/../etc/env.ini',
+            __DIR__ . '/../../../../../../../env.ini',
+            __DIR__ . '/../../../../../../../env.ini.example',
+        ) as $path) {
+            if (is_readable($path)) {
+                return parse_ini_file($path);
             }
-
-            if ($method == 'curl') {
-
-                $ch = curl_init();
-                $headers = array(
-                    "Accept: */*",
-                );
-                curl_setopt_array($ch, array(
-                    CURLOPT_RETURNTRANSFER => 1,
-                    CURLOPT_URL => $url,
-                    CURLOPT_TIMEOUT => $timeout,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_ENCODING => '',
-                    CURLOPT_HTTPHEADER => $headers,
-                ));
-
-                $contents = curl_exec($ch);
-
-                if (curl_errno($ch)) {
-                    curl_close($ch);
-                    return false;
-                }
-
-                curl_close($ch);
-                return $contents;
-            }
-        } catch (Exception $e) {
-            return false;
         }
 
-        return false;
+        return array();
     }
 
     public function validateWebinterpretKey($key)
     {
-        return (!empty($key) && strlen($key) == 32);
+        return !empty($key) && strlen($key) == 32;
     }
 
     public function isEnabled()
@@ -133,16 +74,6 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
         return (bool)Mage::getStoreConfig('webinterpret_connector/global_notifications_enabled');
     }
 
-    public function isStoreExtenderEnabled()
-    {
-        return (bool)Mage::getStoreConfig('webinterpret_connector/store_extender_enabled');
-    }
-
-    public function isBackendRedirectorEnabled()
-    {
-        return (bool)Mage::getStoreConfig('webinterpret_connector/backend_redirector_enabled');
-    }
-
     public function isFooterEnabled()
     {
         $module = $this->isEnabled();
@@ -150,16 +81,22 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
         return $module && $feature;
     }
 
+    public function getRemoteAssetsUrl()
+    {
+        $env = $this->getEnvConfig();
+        return Mage::getStoreConfig('webinterpret_connector/remote_assets_url') ?: $env['REMOTE_ASSETS_URL'];
+    }
+
+    public function isSignatureVerificationEnabled()
+    {
+        $env = $this->getEnvConfig();
+        return (bool)$env['SIGNATURE_VERIFICATION'];
+    }
+
     public function getModuleBridgeDir()
     {
         $dir = Mage::getModuleDir('controllers', 'Webinterpret_Connector');
         $dir = realpath($dir . '/../bridge2cart');
-        return $dir;
-    }
-
-    public function getBaseBridgeDir()
-    {
-        $dir = Mage::getBaseDir() . DS . 'bridge2cart';
         return $dir;
     }
 
@@ -198,18 +135,6 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
     public function getMagentoVersionNumber()
     {
         return Mage::getVersion();
-    }
-
-    public function isRemoteFilesAllowed()
-    {
-        if (ini_get('allow_url_fopen')) {
-            return true;
-        }
-        if (function_exists('curl_version')) {
-            return true;
-        }
-
-        return false;
     }
 
     public function getDownloadMethod()
@@ -376,10 +301,6 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
             ),
             array(
                 'type' => 'file',
-                'path' => 'app/code/community/Webinterpret/Connector/controllers/HelperController.php',
-            ),
-            array(
-                'type' => 'file',
                 'path' => 'app/code/community/Webinterpret/Connector/Block/Adminhtml/Notifications.php',
             ),
             array(
@@ -409,14 +330,6 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
             array(
                 'type' => 'file',
                 'path' => 'app/code/community/Webinterpret/Connector/bridge2cart/config.php',
-            ),
-            array(
-                'type' => 'file',
-                'path' => 'app/code/community/Webinterpret/Connector/bridge2cart/helper.php',
-            ),
-            array(
-                'type' => 'file',
-                'path' => 'app/code/community/Webinterpret/Connector/bridge2cart/preloader.php',
             ),
         );
 
@@ -462,27 +375,5 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
     public function getExtensionVersion()
     {
         return (string) Mage::getConfig()->getNode()->modules->Webinterpret_Connector->version;
-    }
-
-    public function getGeoip2DbPath()
-    {
-        return Mage::getModuleDir('', 'Webinterpret_Connector') . '/resources/geoip/GeoIP2-Country.mmdb';
-    }
-
-    /**
-     * Checks if the session was already started
-     *
-     * @return bool
-     */
-    public function isSessionStarted() {
-        if (php_sapi_name() !== 'cli') {
-            if (version_compare(phpversion(), '5.4.0', '>=')) {
-                return session_status() === PHP_SESSION_ACTIVE;
-            } else {
-                return session_id() !== '';
-            }
-        }
-
-        return false;
     }
 }

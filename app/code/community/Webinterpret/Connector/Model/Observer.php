@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Observer
  *
@@ -27,8 +28,7 @@ class Webinterpret_Connector_Model_Observer
     public function hookIntoAdminhtmlInitSystemConfig($observer)
     {
         try {
-            $session = Mage::getSingleton('admin/session');
-            if ($session) {
+            if ($session = Mage::getSingleton('admin/session')) {
                 $session->setAcl(Mage::getResourceModel('admin/acl')->loadAcl());
             }
         } catch (Exception $e) {}
@@ -41,46 +41,15 @@ class Webinterpret_Connector_Model_Observer
      */
     public function hookIntoWebinterpretConnectorNotificationsBefore($observer)
     {
-        if (!Mage::helper('webinterpret_connector')->isGlobalNotificationsEnabled()) {
-            return $observer;
-        }
-
-        $notifications = Mage::getSingleton('webinterpret_connector/notification');
-
-        if (Mage::helper('webinterpret_connector')->isEnabled()) {
-            if (Mage::getSingleton('admin/session')->isAllowed('system/config')) {
-                if (Mage::helper('webinterpret_connector')->isInstallationMode()) {
-                    $url = Mage::getModel('adminhtml/url')->getUrl('/system_config/edit/section/webinterpret_connector');
-                    $notifications->addMessage(Mage::helper('webinterpret_connector')->__("To continue installing Webinterpret, <a href=\"%s\">click here</a>", $url));
-                }
-            }
-        }
-
-        return $observer;
-    }
-
-    public function hookIntoProductInit($observer)
-    {
-        try {
-            /** @var Webinterpret_Connector_Model_BackendRedirector $backendRedirector */
-            $backendRedirector = Mage::getModel('webinterpret_connector/backendRedirector');
-            /** @var Webinterpret_Connector_Helper_Data $helper */
-            $helper = Mage::helper('webinterpret_connector');
-            $productId = Mage::registry('current_product')->getId();
-
-            if (!$helper->isSessionStarted() || !$helper->isBackendRedirectorEnabled()) {
-                return $observer;
-            }
-
-            $redirectionUrl = $backendRedirector->generateInternationalRedirectionUrlIfAvailable($productId);
-        } catch (\Exception $e) {
-            return $observer;
-        }
-
-        if (!is_null($redirectionUrl)) {
-            Mage::app()->getFrontController()->getResponse()->setRedirect($redirectionUrl);
-            Mage::app()->getResponse()->sendResponse();
-            exit;
+        if (
+            Mage::helper('webinterpret_connector')->isEnabled() &&
+            Mage::helper('webinterpret_connector')->isGlobalNotificationsEnabled() &&
+            Mage::getSingleton('admin/session')->isAllowed('system/config') &&
+            Mage::helper('webinterpret_connector')->isInstallationMode()
+        ) {
+            $url = Mage::getModel('adminhtml/url')->getUrl('/system_config/edit/section/webinterpret_connector');
+            $notifications = Mage::getSingleton('webinterpret_connector/notification');
+            $notifications->addMessage(Mage::helper('webinterpret_connector')->__("To continue installing Webinterpret, <a href=\"%s\">click here</a>", $url));
         }
 
         return $observer;

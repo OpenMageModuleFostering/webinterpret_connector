@@ -1,5 +1,7 @@
 <?php
 
+use Webinterpret_Connector_Model_SignatureException as SignatureException;
+
 /**
  * Verifier helper
  *
@@ -18,12 +20,16 @@ class Webinterpret_Connector_Helper_Verifier extends Mage_Core_Helper_Abstract
      */
     public static function verifyRequestWebInterpretSignature()
     {
+        if (!Mage::helper('webinterpret_connector')->isSignatureVerificationEnabled()) {
+            return true;
+        }
+
         if (!function_exists('openssl_verify')) {
-            throw new Exception('OpenSSL is required.');
+            throw new SignatureException('OpenSSL is required.');
         }
 
         if (empty($_SERVER['HTTP_WEBINTERPRET_REQUEST_ID']) || empty ($_SERVER['HTTP_WEBINTERPRET_SIGNATURE']) || empty ($_SERVER['HTTP_WEBINTERPRET_SIGNATURE_VERSION'])) {
-            throw new Exception('Request needs to be signed by WebInterpret.');
+            throw new SignatureException('Request needs to be signed by WebInterpret.');
         }
 
         $requestId = $_SERVER['HTTP_WEBINTERPRET_REQUEST_ID'];
@@ -31,12 +37,7 @@ class Webinterpret_Connector_Helper_Verifier extends Mage_Core_Helper_Abstract
         $signature = base64_decode($signature);
 
         $version = $_SERVER['HTTP_WEBINTERPRET_SIGNATURE_VERSION'];
-        if (empty($version)) {
-            $version = 1;
-        }
 
-        // Data
-        $data = $requestId;
         if ($version == 2) {
             // Query data
             $queryArray = $_GET;
@@ -49,6 +50,8 @@ class Webinterpret_Connector_Helper_Verifier extends Mage_Core_Helper_Abstract
             $postData = serialize($postData);
 
             $data = $requestId.$queryData.$postData;
+        } else {
+            throw new SignatureException('Not supported signature version.');
         }
 
         // Verify signature
@@ -60,9 +63,9 @@ class Webinterpret_Connector_Helper_Verifier extends Mage_Core_Helper_Abstract
             return true;
         }
         if ($ok == 0) {
-            throw new Exception('Incorrect signature.');
+            throw new SignatureException('Incorrect signature.');
         }
 
-        throw new Exception('Error checking signature');
+        throw new SignatureException('Error checking signature');
     }
 }

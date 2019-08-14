@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Custom renderer for Webinterpret status in System Configuration
  *
@@ -31,10 +32,7 @@ class Webinterpret_Connector_Block_Adminhtml_System_Config_Fieldset_Status
         $url = 'https://webstores.webinterpret.com/plugin/test';
         $storeUrl = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);
         $storeUrl = rtrim($storeUrl, '/');
-        $params = array(
-            'url' => $storeUrl,
-        );
-        $url = $url . '?' . http_build_query($params);
+        $url .= '?' . http_build_query(array('url' => $storeUrl));
         return $url;
     }
 }

@@ -8,7 +8,7 @@
 <config>
     <modules>
         <Webinterpret_Connector>
-            <version>1.3.5.1</version>
+            <version>1.3.6.0</version>
         </Webinterpret_Connector>
     </modules>
     <global>
@@ -55,38 +55,12 @@
                     </webinterpret_connector_notifications_before>
                 </observers>
             </webinterpret_connector_notifications_before>
-            <catalog_controller_product_init>
-                <observers>
-                    <webinterpret_catalog_controller_product_init>
-                        <type>singleton</type>
-                        <class>Webinterpret_Connector_Model_Observer</class>
-                        <method>hookIntoProductInit</method>
-                    </webinterpret_catalog_controller_product_init>
-                </observers>
-            </catalog_controller_product_init>
-            <controller_front_init_before>
-                <observers>
-                    <webinterpret_controller_front_init_before>
-                        <type>object</type>
-                        <class>Webinterpret_Connector_Helper_Autoloader</class>
-                        <method>createAndRegister</method>
-                    </webinterpret_controller_front_init_before>
-                </observers>
-            </controller_front_init_before>
         </events>
         <request>
             <direct_front_name>
                 <webinterpret_connector/>
-                <glopal/>
             </direct_front_name>
         </request>
-        <rewrite>
-            <glopal_url>
-                <from><![CDATA[/glopal\/(.+)/]]></from>
-                <to><![CDATA[glopal/index/index/$1]]></to>
-                <complete>1</complete>
-            </glopal_url>
-        </rewrite>
     </global>
     <frontend>
         <routers>
@@ -97,13 +71,6 @@
                     <frontName>webinterpret_connector</frontName>
                 </args>
             </webinterpret_connector>
-            <glopal>
-                <use>standard</use>
-                <args>
-                    <module>Webinterpret_Connector</module>
-                    <frontName>glopal</frontName>
-                </args>
-            </glopal>
         </routers>
         <layout>
             <updates>
@@ -124,19 +91,17 @@
     </adminhtml>
     <default>
         <webinterpret_connector>
-            <enabled><![CDATA[1]]></enabled>
-            <key><![CDATA[]]></key>
-            <file_repository><![CDATA[https://webstores.webinterpret.com]]></file_repository>
-            <footer_enabled><![CDATA[1]]></footer_enabled>
-            <footer><![CDATA[]]></footer>
-            <tracking_code><![CDATA[]]></tracking_code>
-            <plugin_id><![CDATA[]]></plugin_id>
-            <head><![CDATA[]]></head>
-            <installation_mode><![CDATA[1]]></installation_mode>
-            <global_notifications_enabled><![CDATA[1]]></global_notifications_enabled>
-            <automatic_updates_enabled><![CDATA[1]]></automatic_updates_enabled>
-            <store_extender_enabled><![CDATA[0]]></store_extender_enabled>
-            <store_extender_url><![CDATA[https://wi-ws-store-ext.glopal.com/index.php]]></store_extender_url>
+            <enabled>1</enabled>
+            <key/>
+            <file_repository>https://webstores.webinterpret.com</file_repository>
+            <footer_enabled>1</footer_enabled>
+            <footer/>
+            <tracking_code/>
+            <plugin_id/>
+            <head/>
+            <installation_mode>1</installation_mode>
+            <global_notifications_enabled>1</global_notifications_enabled>
+            <automatic_updates_enabled>1</automatic_updates_enabled>
             <public_key><![CDATA[-----BEGIN PUBLIC KEY-----
 MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA6YW1LitbxWceRjvGZnwd
 h7/NH0Gbmnt+jEpC99KJuu4wPV+AyByUV3KxOwo6fUWozsts2tSgg3hgxnTEwjwF
@@ -151,8 +116,7 @@ azayJumvfHBOs53t6fI/a52CfQ2I4jaz3eHI0hpHyZVxvsAj5NbFXBYzQ+mOoTEa
 38d6cBHbci6rLRJ0PdaP6ZABz9OI3UE8VCz5n5BZEJ0QWmXmnn2YnWq8p3Si53KK
 tQMgSP58oPZ6Nq6qM6KrlmkCAwEAAQ==
 -----END PUBLIC KEY-----]]></public_key>
-            <inventory_manager_url><![CDATA[https://d1f68rsmoq5ae3.cloudfront.net]]></inventory_manager_url>
-            <backend_redirector_enabled><![CDATA[0]]></backend_redirector_enabled>
+            <remote_assets_url/>
         </webinterpret_connector>
     </default>
 </config>

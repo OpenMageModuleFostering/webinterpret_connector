@@ -10,5 +10,6 @@
 <?php if (Mage::helper('webinterpret_connector')->isEnabled()): ?>
 <!-- webinterpret_head -->
 <?php echo $this->getHeadHtml(); ?>
+<script type="text/javascript" src="<?php echo $this->getLoaderUrl(); ?>"></script>
 <!-- end webinterpret_head -->
 <?php endif; ?>

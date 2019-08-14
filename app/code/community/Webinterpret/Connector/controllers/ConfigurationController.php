@@ -1,8 +1,6 @@
 <?php
 
 /**
- * Diagnostics controller
- *
  * @category   Webinterpret
  * @package    Webinterpret_Connector
  * @author     Webinterpret Team <info@webinterpret.com>
@@ -18,11 +16,13 @@ class Webinterpret_Connector_ConfigurationController extends Mage_Core_Controlle
             if ($_GET['action'] === 'update-option') {
                 $this->handleUpdateOptionRequest();
             }
+        } catch (Webinterpret_Connector_Model_SignatureException $e) {
+            header('HTTP/1.0 403 Forbidden');
+            echo $e->getMessage();
         } catch (\Exception $e) {
             echo $e->getMessage();
-            die();
         }
-        die();
+        die;
     }
 
     /**

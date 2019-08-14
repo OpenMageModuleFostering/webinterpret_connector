@@ -16,13 +16,6 @@ Default layout, loads most of the pages
         <!-- Header -->
         <reference name="head">
             <block type="webinterpret_connector/head" after="-" name="webinterpret_connector_head" as="wi_head" template="webinterpret/connector/head.phtml" />
-            <block type="core/text" name="webinterpret_connector_remote_assets_head">
-                <action method="setText">
-                    <text>
-                        <![CDATA[<script type="text/javascript" src="//d2leqgr9fez74i.cloudfront.net/common/js/webinterpret-loader.js"></script>]]>
-                    </text>
-                </action>
-            </block>
         </reference>
 
         <!-- Footer -->

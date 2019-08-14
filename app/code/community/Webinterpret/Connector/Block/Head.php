@@ -13,4 +13,9 @@ class Webinterpret_Connector_Block_Head extends Mage_Core_Block_Template
     {
         return Mage::getStoreConfig('webinterpret_connector/head') . PHP_EOL;
     }
+
+    public function getLoaderUrl()
+    {
+        return Mage::helper('webinterpret_connector')->getRemoteAssetsUrl() . '/common/js/webinterpret-loader.js';
+    }
 }
