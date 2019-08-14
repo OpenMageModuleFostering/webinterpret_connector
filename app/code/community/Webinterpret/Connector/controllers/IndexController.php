@@ -11,6 +11,18 @@ class Webinterpret_Connector_IndexController extends Mage_Core_Controller_Front_
 {
     public function indexAction()
     {
+        // Handle glopal request
+        $module = Mage::app()->getRequest()->getModuleName();
+        if ($module === 'glopal') {
+            if (!Mage::helper('webinterpret_connector')->isStoreExtenderEnabled()) {
+                $this->_forward('defaultNoRoute');
+                return;
+            }
+            $storeExtender = Mage::getModel('webinterpret_connector/storeExtender');
+            $storeExtender->parseRequest();
+            die();
+        }
+
         try {
             $dir = Mage::helper('webinterpret_connector')->getModuleBridgeDir();
             $path = $dir . DS . 'bridge.php';
