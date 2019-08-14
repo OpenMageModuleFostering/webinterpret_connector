@@ -11,20 +11,23 @@ class Webinterpret_Connector_Block_Product_View extends Mage_Core_Block_Template
 {
     public function getProductId()
     {
-        $id = Mage::registry('current_product')->getId();
         if (isset($_GET['wi_product_id'])) {
-            $id = $_GET['wi_product_id'];
+            return $_GET['wi_product_id'];
         }
-        return $id;
+        return Mage::registry('current_product')->getId();
     }
 
     public function getStoreUrl()
     {
-        $url = Mage::helper('webinterpret_connector')->getStoreBaseUrl();
         if (isset($_GET['wi_store_url'])) {
-            $url = $_GET['wi_store_url'];
+            return $_GET['wi_store_url'];
         }
-        return $url;
+        return Mage::helper('webinterpret_connector')->getStoreBaseUrl();
+    }
+
+    public function getStoreViewId()
+    {
+        return Mage::app()->getStore()->getId();
     }
 
     public function getLocaleCode()

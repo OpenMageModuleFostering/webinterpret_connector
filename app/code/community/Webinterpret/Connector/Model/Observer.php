@@ -64,13 +64,11 @@ class Webinterpret_Connector_Model_Observer
         try {
             /** @var Webinterpret_Connector_Model_BackendRedirector $backendRedirector */
             $backendRedirector = Mage::getModel('webinterpret_connector/backendRedirector');
+            /** @var Webinterpret_Connector_Helper_Data $helper */
+            $helper = Mage::helper('webinterpret_connector');
             $productId = Mage::registry('current_product')->getId();
 
-            if (
-                !Mage::helper('webinterpret_connector')->isSessionStarted() ||
-                !Mage::helper('webinterpret_connector')->isBackendRedirectorEnabled() ||
-                $backendRedirector->isBackendRedirectorDisabledForProduct($productId)
-            ) {
+            if (!$helper->isSessionStarted() || !$helper->isBackendRedirectorEnabled()) {
                 return $observer;
             }
 
@@ -80,12 +78,10 @@ class Webinterpret_Connector_Model_Observer
         }
 
         if (!is_null($redirectionUrl)) {
-            $backendRedirector->disableBackendRedirectorForProduct($productId);
             Mage::app()->getFrontController()->getResponse()->setRedirect($redirectionUrl);
             Mage::app()->getResponse()->sendResponse();
             exit;
         }
-
 
         return $observer;
     }

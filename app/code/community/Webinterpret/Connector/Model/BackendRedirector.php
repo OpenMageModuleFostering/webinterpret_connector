@@ -19,16 +19,6 @@ use WebinterpretConnector\Webinterpret\Toolkit\GeoIP;
  */
 class Webinterpret_Connector_Model_BackendRedirector extends Varien_Object
 {
-    /**
-     * Time that the redirector should be disabled for in seconds
-     */
-    const REDIRECTOR_DISABLEMENT_PERIOD = 3600;
-
-    /**
-     * The key that the list of disabled products will be kept under in the session
-     */
-    const REDIRECTOR_DISABLEMENT_LIST_SESSION_KEY = 'webinterpret-redirector-disabled-products';
-
     /** @var GeoIP */
     private $geoIp;
 
@@ -187,37 +177,6 @@ class Webinterpret_Connector_Model_BackendRedirector extends Varien_Object
             return new Curl();
         } else {
             return new FileGetContents();
-        }
-    }
-
-    public function disableBackendRedirectorForProduct($productId)
-    {
-        $disabledProducts = Mage::getSingleton('core/session')->getData(self::REDIRECTOR_DISABLEMENT_LIST_SESSION_KEY);
-
-        if (!is_array($disabledProducts)) {
-            $disabledProducts = array();
-        }
-
-        $disabledProducts[$productId] = time() + self::REDIRECTOR_DISABLEMENT_PERIOD;
-
-        Mage::getSingleton('core/session')->setData(self::REDIRECTOR_DISABLEMENT_LIST_SESSION_KEY, $disabledProducts);
-    }
-
-    public function isBackendRedirectorDisabledForProduct($productId)
-    {
-        $disabledProducts = Mage::getSingleton('core/session')->getData(self::REDIRECTOR_DISABLEMENT_LIST_SESSION_KEY);
-        $redirectorDisablementExpiryDate = isset($disabledProducts[$productId]) ? $disabledProducts[$productId] : null;
-
-        if (is_null($redirectorDisablementExpiryDate)) {
-            return false;
-        }
-
-        if ($redirectorDisablementExpiryDate < time()) {
-            unset($disabledProducts[$productId]);
-            Mage::getSingleton('core/session')->setData(self::REDIRECTOR_DISABLEMENT_LIST_SESSION_KEY, $disabledProducts);
-            return false;
-        } else {
-            return true;
         }
     }
 }
