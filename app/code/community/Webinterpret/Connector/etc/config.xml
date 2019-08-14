@@ -8,7 +8,7 @@
 <config>
     <modules>
         <Webinterpret_Connector>
-            <version>1.3.6.0</version>
+            <version>1.4.0.0</version>
         </Webinterpret_Connector>
     </modules>
     <global>

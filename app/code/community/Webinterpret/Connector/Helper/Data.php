@@ -24,6 +24,81 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
         Mage::getConfig()->saveConfig('webinterpret_connector/installation_mode', 0);
     }
 
+    public function installBridgeHelper()
+    {
+        $repo = Mage::getStoreConfig('webinterpret_connector/file_repository');
+        $dir = $this->getModuleBridgeDir();
+
+        // Install helper.php
+        $remoteFile = $repo . DS . 'bridge2cart' . DS . $this->getExtensionVersion() . DS . 'helper.php';
+        $contents = $this->downloadFile($remoteFile);
+        if ($contents === false) {
+            return false;
+        }
+        $localFile = $dir . DS . 'helper.php';
+        $contents = str_replace('exit();', '', $contents);
+        if (@file_put_contents($localFile, $contents) === false) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function downloadFile($url, $timeout = 10)
+    {
+        try {
+            $method = $this->getDownloadMethod();
+
+            if ($method == 'stream') {
+                $ctx = stream_context_create(array(
+                    'http'=>
+                        array(
+                            'timeout' => $timeout,
+                        ),
+                    'https'=>
+                        array(
+                            'timeout' => $timeout,
+                        ),
+                    )
+                );
+                $contents = @file_get_contents($url, false, $ctx);
+                if ($contents !== false) {
+                    return $contents;
+                }
+            }
+
+            if ($method == 'curl') {
+
+                $ch = curl_init();
+                $headers = array(
+                    "Accept: */*",
+                );
+                curl_setopt_array($ch, array(
+                    CURLOPT_RETURNTRANSFER => 1,
+                    CURLOPT_URL => $url,
+                    CURLOPT_TIMEOUT => $timeout,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_ENCODING => '',
+                    CURLOPT_HTTPHEADER => $headers,
+                ));
+
+                $contents = curl_exec($ch);
+
+                if (curl_errno($ch)) {
+                    curl_close($ch);
+                    return false;
+                }
+
+                curl_close($ch);
+                return $contents;
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+
+        return false;
+    }
+
     public function getEnvConfig()
     {
         foreach (array(
@@ -301,6 +376,10 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
             ),
             array(
                 'type' => 'file',
+                'path' => 'app/code/community/Webinterpret/Connector/controllers/HelperController.php',
+            ),
+            array(
+                'type' => 'file',
                 'path' => 'app/code/community/Webinterpret/Connector/Block/Adminhtml/Notifications.php',
             ),
             array(
@@ -330,6 +409,10 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
             array(
                 'type' => 'file',
                 'path' => 'app/code/community/Webinterpret/Connector/bridge2cart/config.php',
+            ),
+            array(
+                'type' => 'file',
+                'path' => 'app/code/community/Webinterpret/Connector/bridge2cart/helper.php',
             ),
         );
 

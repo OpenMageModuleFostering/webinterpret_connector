@@ -3,8 +3,6 @@
 use Webinterpret_Connector_Model_SignatureException as SignatureException;
 
 /**
- * Verifier helper
- *
  * @category   Webinterpret
  * @package    Webinterpret_Connector
  * @author     Webinterpret Team <info@webinterpret.com>
