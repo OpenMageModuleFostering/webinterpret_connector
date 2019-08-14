@@ -58,4 +58,35 @@ class Webinterpret_Connector_Model_Observer
 
         return $observer;
     }
+
+    public function hookIntoProductInit($observer)
+    {
+        try {
+            /** @var Webinterpret_Connector_Model_BackendRedirector $backendRedirector */
+            $backendRedirector = Mage::getModel('webinterpret_connector/backendRedirector');
+            $productId = Mage::registry('current_product')->getId();
+
+            if (
+                !Mage::helper('webinterpret_connector')->isSessionStarted() ||
+                !Mage::helper('webinterpret_connector')->isBackendRedirectorEnabled() ||
+                $backendRedirector->isBackendRedirectorDisabledForProduct($productId)
+            ) {
+                return $observer;
+            }
+
+            $redirectionUrl = $backendRedirector->generateInternationalRedirectionUrlIfAvailable($productId);
+        } catch (\Exception $e) {
+            return $observer;
+        }
+
+        if (!is_null($redirectionUrl)) {
+            $backendRedirector->disableBackendRedirectorForProduct($productId);
+            Mage::app()->getFrontController()->getResponse()->setRedirect($redirectionUrl);
+            Mage::app()->getResponse()->sendResponse();
+            exit;
+        }
+
+
+        return $observer;
+    }
 }

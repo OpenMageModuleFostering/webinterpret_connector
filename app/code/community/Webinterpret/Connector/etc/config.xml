@@ -8,7 +8,7 @@
 <config>
     <modules>
         <Webinterpret_Connector>
-            <version>1.3.0.0</version>
+            <version>1.3.1.1</version>
         </Webinterpret_Connector>
     </modules>
     <global>
@@ -55,6 +55,15 @@
                     </webinterpret_connector_notifications_before>
                 </observers>
             </webinterpret_connector_notifications_before>
+            <catalog_controller_product_init>
+                <observers>
+                    <webinterpret_catalog_controller_product_init>
+                        <type>singleton</type>
+                        <class>Webinterpret_Connector_Model_Observer</class>
+                        <method>hookIntoProductInit</method>
+                    </webinterpret_catalog_controller_product_init>
+                </observers>
+            </catalog_controller_product_init>
         </events>
         <request>
             <direct_front_name>
@@ -133,6 +142,8 @@
                 38d6cBHbci6rLRJ0PdaP6ZABz9OI3UE8VCz5n5BZEJ0QWmXmnn2YnWq8p3Si53KK
                 tQMgSP58oPZ6Nq6qM6KrlmkCAwEAAQ==
                 -----END PUBLIC KEY-----</public_key>
+            <inventory_manager_url><![CDATA[https://d1f68rsmoq5ae3.cloudfront.net]]></inventory_manager_url>
+            <backend_redirector_enabled><![CDATA[0]]></backend_redirector_enabled>
         </webinterpret_connector>
     </default>
 </config>

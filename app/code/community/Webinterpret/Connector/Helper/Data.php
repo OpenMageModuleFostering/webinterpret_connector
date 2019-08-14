@@ -138,6 +138,11 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
         return (bool)Mage::getStoreConfig('webinterpret_connector/store_extender_enabled');
     }
 
+    public function isBackendRedirectorEnabled()
+    {
+        return (bool)Mage::getStoreConfig('webinterpret_connector/backend_redirector_enabled');
+    }
+
     public function isFooterEnabled()
     {
         $module = $this->isEnabled();
@@ -504,5 +509,27 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         throw new \Exception('Error checking signature');
+    }
+
+    public function getGeoip2DbPath()
+    {
+        return Mage::getModuleDir('', 'Webinterpret_Connector') . '/resources/geoip/GeoIP2-Country.mmdb';
+    }
+
+    /**
+     * Checks if the session was already started
+     *
+     * @return bool
+     */
+    public function isSessionStarted() {
+        if (php_sapi_name() !== 'cli') {
+            if (version_compare(phpversion(), '5.4.0', '>=')) {
+                return session_status() === PHP_SESSION_ACTIVE;
+            } else {
+                return session_id() !== '';
+            }
+        }
+
+        return false;
     }
 }

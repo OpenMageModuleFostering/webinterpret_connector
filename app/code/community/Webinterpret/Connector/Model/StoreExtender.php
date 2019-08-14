@@ -1,10 +1,10 @@
 <?php
 
-use WebinterpretConnector\Buzz\Browser;
-use WebinterpretConnector\Buzz\Client\Curl;
-use WebinterpretConnector\Buzz\Client\FileGetContents;
-use WebinterpretConnector\Buzz\Exception\ClientException;
-use WebinterpretConnector\Buzz\Message\Response;
+use Buzz\Browser;
+use Buzz\Client\Curl;
+use Buzz\Client\FileGetContents;
+use Buzz\Exception\ClientException;
+use Buzz\Message\Response;
 
 /**
  * StoreExtender
@@ -14,7 +14,7 @@ use WebinterpretConnector\Buzz\Message\Response;
  * @author     Webinterpret Team <info@webinterpret.com>
  * @license    http://opensource.org/licenses/osl-3.0.php
  */
-class Webinterpret_Connector_Model_StoreExtender extends Varien_object
+class Webinterpret_Connector_Model_StoreExtender extends Varien_Object
 {
     /**
      * @var string Prefix for cookies that should be forwarded to store extender proxy
@@ -23,7 +23,10 @@ class Webinterpret_Connector_Model_StoreExtender extends Varien_object
 
     public function __construct()
     {
+        require_once(Mage::getModuleDir('', 'Webinterpret_Connector') . '/Lib/autoload.php');
         spl_autoload_register(array($this, 'loadStoreExtenderDependencies'), true, true);
+
+        parent::__construct();
     }
 
     public static function loadStoreExtenderDependencies($class)
@@ -126,7 +129,7 @@ class Webinterpret_Connector_Model_StoreExtender extends Varien_object
     }
 
     /**
-     * @param \WebinterpretConnector\Buzz\Message\Response $response
+     * @param \Buzz\Message\Response $response
      * @return array
      */
     private function parseResponseHeadersToArray(Response $response)
