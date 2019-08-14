@@ -1,57 +1,104 @@
 <?php
-/**
- * Bridge
- *
- * @category   Webinterpret
- * @package    Webinterpret_Connector
- * @author     Webinterpret Team <info@webinterpret.com>
- * @license    http://opensource.org/licenses/osl-3.0.php
- */
 
 require_once 'preloader.php';
 
+/*-----------------------------------------------------------------------------+
+| MagneticOne                                                                  |
+| Copyright (c) 2012 MagneticOne.com <contact@magneticone.com>                 |
+| All rights reserved                                                          |
++------------------------------------------------------------------------------+
+| PLEASE READ  THE FULL TEXT OF SOFTWARE LICENSE AGREEMENT IN THE "license.txt"|
+| FILE PROVIDED WITH THIS DISTRIBUTION. THE AGREEMENT TEXT IS ALSO AVAILABLE   |
+| AT THE FOLLOWING URL: http://www.magneticone.com/store/license.php           |
+|                                                                              |
+| THIS  AGREEMENT  EXPRESSES  THE  TERMS  AND CONDITIONS ON WHICH YOU MAY USE  |
+| THIS SOFTWARE   PROGRAM   AND  ASSOCIATED  DOCUMENTATION   THAT  MAGNETICONE |
+| (hereinafter  referred to as "THE AUTHOR") IS FURNISHING  OR MAKING          |
+| AVAILABLE TO YOU WITH  THIS  AGREEMENT  (COLLECTIVELY,  THE  "SOFTWARE").    |
+| PLEASE   REVIEW   THE  TERMS  AND   CONDITIONS  OF  THIS  LICENSE AGREEMENT  |
+| CAREFULLY   BEFORE   INSTALLING   OR  USING  THE  SOFTWARE.  BY INSTALLING,  |
+| COPYING   OR   OTHERWISE   USING   THE   SOFTWARE,  YOU  AND  YOUR  COMPANY  |
+| (COLLECTIVELY,  "YOU")  ARE  ACCEPTING  AND AGREEING  TO  THE TERMS OF THIS  |
+| LICENSE   AGREEMENT.   IF  YOU    ARE  NOT  WILLING   TO  BE  BOUND BY THIS  |
+| AGREEMENT, DO  NOT INSTALL OR USE THE SOFTWARE.  VARIOUS   COPYRIGHTS   AND  |
+| OTHER   INTELLECTUAL   PROPERTY   RIGHTS    PROTECT   THE   SOFTWARE.  THIS  |
+| AGREEMENT IS A LICENSE AGREEMENT THAT GIVES  YOU  LIMITED  RIGHTS   TO  USE  |
+| THE  SOFTWARE   AND  NOT  AN  AGREEMENT  FOR SALE OR FOR  TRANSFER OF TITLE. |
+| THE AUTHOR RETAINS ALL RIGHTS NOT EXPRESSLY GRANTED BY THIS AGREEMENT.       |
+|                                                                              |
+| The Developer of the Code is MagneticOne,                                    |
+| Copyright (C) 2006 - 2016 All Rights Reserved.                               |
++------------------------------------------------------------------------------+
+|                                                                              |
+|                            ATTENTION!                                        |
++------------------------------------------------------------------------------+
+| By our Terms of Use you agreed not to change, modify, add, or remove portions|
+| of Bridge Script source code as it is owned by MagneticOne company.          |
+| You agreed not to use, reproduce, modify, adapt, publish, translate          |
+| the Bridge Script source code into any form, medium, or technology           |
+| now known or later developed throughout the universe.                        |
+|                                                                              |
+| Full text of our TOS located at                                              |
+|                       https://www.api2cart.com/terms-of-service               |
++-----------------------------------------------------------------------------*/
+
+
+/**
+ * Class M1_Bridge_Action_Update
+ */
 class M1_Bridge_Action_Update
 {
-  var $uri = "BRIDGE_DOWNLOAD_LINK";
+  private $_pathToTmpDir;
+  private $_pathToFile = __FILE__;
 
-  var $pathToTmpDir;
-  
-  var $pathToFile = __FILE__;
-  
-  function M1_Bridge_Action_Update()
+  /**
+   * M1_Bridge_Action_Update constructor.
+   */
+  public function __construct()
   {
-    $this->pathToTmpDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . "temp_c2c";
+    $this->_pathToTmpDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . "temp_c2c";
   }
 
-  function perform($bridge)
+  /**
+   * @param M1_Bridge $bridge
+   */
+  public function perform(M1_Bridge $bridge)
   {
     $response = new stdClass();
-    if ( !($this->_checkBridgeDirPermission() && $this->_checkBridgeFilePermission()) ) {
-      $response->is_error = true;
-      $response->message = "Bridge Update couldn't be performed. Please change permission for bridge folder to 777 and bridge.php file inside it to 666";
-      echo serialize($response);die;  
+    if (!($this->_checkBridgeDirPermission() && $this->_checkBridgeFilePermission())) {
+      $response->code = 1;
+      $response->message = "Bridge Update couldn't be performed. " .
+        "Please change permission for bridge folder to 777 and bridge.php file inside it to 666";
+      echo serialize($response);
+      die;
     }
 
-
-    if ( ($data = $this->_downloadFile()) === false ) {
-      $response->is_error = true;
-      $response->message = "Bridge Version is outdated. Files couldn't be updated automatically. Please set write permission or re-upload files manually.";
-      echo serialize($response);die;
+    if (($data = $this->_downloadFile()) === false) {
+      $response->code = 1;
+      $response->message = "Bridge Version is outdated. Files couldn't be updated automatically. ".
+        "Please set write permission or re-upload files manually.";
+      echo serialize($response);
+      die;
     }
 
-    if ( !$this->_writeToFile($data, $this->pathToFile) ) {
-      $response->is_error = true;
+    if (!$this->_writeToFile($data, $this->_pathToFile)) {
+      $response->code = 1;
       $response->message = "Couln't create file in temporary folder or file is write protected.";
-      echo serialize($response);die;
+      echo serialize($response);
+      die;
     }
 
-    $response->is_error = false;
+    $response->code = 0;
     $response->message = "Bridge successfully updated to latest version";
-    echo serialize($response);
+    echo json_encode($response);
     die;
   }
 
-  function _fetch( $uri )
+  /**
+   * @param $uri
+   * @return stdClass
+   */
+  private function _fetch($uri)
   {
     $ch = curl_init();
 
@@ -61,17 +108,20 @@ class M1_Bridge_Action_Update
 
     $response = new stdClass();
 
-    $response->body           = curl_exec($ch);
-    $response->http_code      = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $response->content_type   = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-    $response->content_length = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
+    $response->body          = curl_exec($ch);
+    $response->httpCode      = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $response->contentType   = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+    $response->contentLength = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
 
     curl_close($ch);
 
     return $response;
   }
 
-  function _checkBridgeDirPermission()
+  /**
+   * @return bool
+   */
+  private function _checkBridgeDirPermission()
   {
     if (!is_writeable(dirname(__FILE__))) {
       @chmod(dirname(__FILE__), 0777);
@@ -79,7 +129,10 @@ class M1_Bridge_Action_Update
     return is_writeable(dirname(__FILE__));
   }
 
-  function _checkBridgeFilePermission()
+  /**
+   * @return bool
+   */
+  private function _checkBridgeFilePermission()
   {
     $pathToFile = dirname(__FILE__) . DIRECTORY_SEPARATOR . "bridge.php";
     if (!is_writeable($pathToFile)) {
@@ -88,48 +141,70 @@ class M1_Bridge_Action_Update
     return is_writeable($pathToFile);
   }
 
-  function _createTempDir()
+  /**
+   * @return bool
+   */
+  public function _createTempDir()
   {
-    @mkdir($this->pathToTmpDir, 0777);
-    return file_exists($this->pathToTmpDir);
+    @mkdir($this->_pathToTmpDir, 0777);
+    return file_exists($this->_pathToTmpDir);
   }
 
-  function _removeTempDir()
+  /**
+   * @return bool
+   */
+  public function _removeTempDir()
   {
-    @unlink($this->pathToTmpDir . DIRECTORY_SEPARATOR . "bridge.php_c2c");
-    @rmdir($this->pathToTmpDir);
-    return !file_exists($this->pathToTmpDir);
+    @unlink($this->_pathToTmpDir . DIRECTORY_SEPARATOR . "bridge.php_c2c");
+    @rmdir($this->_pathToTmpDir);
+    return !file_exists($this->_pathToTmpDir);
   }
 
-  function _downloadFile()
+  /**
+   * @return bool|stdClass
+   */
+  private function _downloadFile()
   {
-    $file = $this->_fetch($this->uri);
-    if ( $file->http_code == 200 ) {
+    $file = $this->_fetch(M1_BRIDGE_DOWNLOAD_LINK);
+    if ($file->httpCode == 200) {
       return $file;
     }
     return false;
   }
 
-  function _writeToFile($data, $file)
+  /**
+   * @param $data
+   * @param $file
+   * @return bool
+   */
+  private function _writeToFile($data, $file)
   {
     if (function_exists("file_put_contents")) {
       $bytes = file_put_contents($file, $data->body);
-      return $bytes == $data->content_length;
+      return $bytes == $data->contentLength;
     }
 
     $handle = @fopen($file, 'w+');
     $bytes = fwrite($handle, $data->body);
     @fclose($handle);
 
-    return $bytes == $data->content_length;
+    return $bytes == $data->contentLength;
 
   }
 
 }
 
+/**
+ * Class M1_Bridge_Action_Query
+ */
 class M1_Bridge_Action_Query
 {
-  function perform($bridge)
+
+  /**
+   * @param M1_Bridge $bridge
+   * @return bool
+   */
+  public function perform(M1_Bridge $bridge)
   {
     if (isset($_POST['query']) && isset($_POST['fetchMode'])) {
       $query = base64_decode($_POST['query']);
@@ -154,10 +229,17 @@ class M1_Bridge_Action_Query
   }
 }
 
+/**
+ * Class M1_Bridge_Action_Getconfig
+ */
 class M1_Bridge_Action_Getconfig
 {
 
-  function parseMemoryLimit($val)
+  /**
+   * @param $val
+   * @return int
+   */
+  private function parseMemoryLimit($val)
   {
     $last = strtolower($val[strlen($val)-1]);
     switch($last) {
@@ -172,7 +254,10 @@ class M1_Bridge_Action_Getconfig
     return $val;
   }
 
-  function getMemoryLimit()
+  /**
+   * @return mixed
+   */
+  private function getMemoryLimit()
   {
     $memoryLimit = trim(@ini_get('memory_limit'));
     if (strlen($memoryLimit) === 0) {
@@ -203,12 +288,18 @@ class M1_Bridge_Action_Getconfig
     return min($suhosinMaxPostSize, $maxPostSize, $memoryLimit);
   }
 
-  function isZlibSupported()
+  /**
+   * @return bool
+   */
+  private function isZlibSupported()
   {
     return function_exists('gzdecode');
   }
 
-  function perform($bridge)
+  /**
+   * @param $bridge
+   */
+  public function perform(M1_Bridge $bridge)
   {
     if (!defined("DEFAULT_LANGUAGE_ISO2")) {
       define("DEFAULT_LANGUAGE_ISO2", ""); //variable for Interspire cart
@@ -226,8 +317,9 @@ class M1_Bridge_Action_Getconfig
       ),
       "languages"             => $bridge->config->languages,
       "baseDirFs"             => M1_STORE_BASE_DIR,    // filesystem path to store root
+      "bridgeVersion"         => M1_BRIDGE_VERSION,
       "defaultLanguageIso2"   => DEFAULT_LANGUAGE_ISO2,
-      "databaseName"          => $bridge->config->Dbname,
+      "databaseName"          => $bridge->config->dbname,
       "memoryLimit"           => $this->getMemoryLimit(),
       "zlibSupported"         => $this->isZlibSupported(),
       //"orderStatus"           => $bridge->config->orderStatus,
@@ -239,10 +331,17 @@ class M1_Bridge_Action_Getconfig
 
 }
 
-
+/**
+ * Class M1_Bridge_Action_Batchsavefile
+ */
 class M1_Bridge_Action_Batchsavefile extends M1_Bridge_Action_Savefile
 {
-  function perform($bridge) {
+
+  /**
+   * @param M1_Bridge $bridge
+   */
+  public function perform(M1_Bridge $bridge)
+  {
     $result = array();
 
     foreach ($_POST['files'] as $fileInfo) {
@@ -260,24 +359,34 @@ class M1_Bridge_Action_Batchsavefile extends M1_Bridge_Action_Savefile
 
 }
 
+/**
+ * Class M1_Bridge_Action_Deleteimages
+ */
 class M1_Bridge_Action_Deleteimages
 {
-  function perform($bridge)
+
+  /**
+   * @param M1_Bridge $bridge
+   */
+  public function perform(M1_Bridge $bridge)
   {
     switch($bridge->config->cartType) {
       case "Pinnacle361":
-        $this->_PinnacleDeleteImages($bridge);
-      break;
+        $this->_pinnacleDeleteImages($bridge);
+        break;
       case "Prestashop11":
-        $this->_PrestaShopDeleteImages($bridge);
-      break;
+        $this->_prestaShopDeleteImages($bridge);
+        break;
       case 'Summercart3' :
-        $this->_SummercartDeleteImages($bridge);
-      break;
+        $this->_summercartDeleteImages($bridge);
+        break;
     }
   }
 
-  function _PinnacleDeleteImages($bridge)
+  /**
+   * @param $bridge
+   */
+  private function _pinnacleDeleteImages(M1_Bridge $bridge)
   {
     $dirs = array(
       M1_STORE_BASE_DIR . $bridge->config->imagesDir . 'catalog/',
@@ -290,9 +399,9 @@ class M1_Bridge_Action_Deleteimages
 
     $ok = true;
 
-    foreach($dirs as $dir) {
+    foreach ($dirs as $dir) {
 
-      if( !file_exists( $dir ) ) {
+      if (!file_exists($dir)) {
         continue;
       }
 
@@ -315,7 +424,10 @@ class M1_Bridge_Action_Deleteimages
     else print "ERROR";
   }
 
-  function _PrestaShopDeleteImages($bridge)
+  /**
+   * @param $bridge
+   */
+  private function _prestaShopDeleteImages(M1_Bridge $bridge)
   {
     $dirs = array(
       M1_STORE_BASE_DIR . $bridge->config->imagesDir . 'c/',
@@ -325,19 +437,19 @@ class M1_Bridge_Action_Deleteimages
 
     $ok = true;
 
-    foreach($dirs as $dir) {
+    foreach ($dirs as $dir) {
 
-      if( !file_exists( $dir ) ) {
+      if (!file_exists($dir)) {
         continue;
       }
 
       $dirHandle = opendir($dir);
 
       while (false !== ($file = readdir($dirHandle))) {
-        if ($file != "." && $file != ".." && preg_match( "/(\d+).*\.jpg?$/",$file )) {
+        if ($file != "." && $file != ".." && preg_match("/(\d+).*\.jpg?$/", $file)) {
           $file_path = $dir . $file;
-          if( is_file($file_path) ) {
-            if(!rename($file_path, $file_path.".bak")) $ok = false;
+          if (is_file($file_path)) {
+            if (!rename($file_path, $file_path . ".bak")) $ok = false;
           }
         }
       }
@@ -350,7 +462,10 @@ class M1_Bridge_Action_Deleteimages
     else print "ERROR";
   }
 
-  function _SummercartDeleteImages($bridge)
+  /**
+   * @param $bridge
+   */
+  private function _summercartDeleteImages(M1_Bridge $bridge)
   {
     $dirs = array(
       M1_STORE_BASE_DIR . $bridge->config->imagesDir . 'categoryimages/',
@@ -363,9 +478,9 @@ class M1_Bridge_Action_Deleteimages
 
     $ok = true;
 
-    foreach($dirs as $dir) {
+    foreach ($dirs as $dir) {
 
-      if( !file_exists( $dir ) ) {
+      if (!file_exists($dir)) {
         continue;
       }
 
@@ -389,16 +504,25 @@ class M1_Bridge_Action_Deleteimages
   }
 }
 
+/**
+ * Class M1_Bridge_Action_Cubecart
+ */
 class M1_Bridge_Action_Cubecart
 {
-  function perform($bridge)
+
+  /**
+   * @param M1_Bridge $bridge
+   */
+  public function perform(M1_Bridge $bridge)
   {
     $dirHandle = opendir(M1_STORE_BASE_DIR . 'language/');
 
     $languages = array();
 
     while ($dirEntry = readdir($dirHandle)) {
-      if (!is_dir(M1_STORE_BASE_DIR . 'language/' . $dirEntry) || $dirEntry == '.' || $dirEntry == '..' || strpos($dirEntry, "_") !== false) {
+      if (!is_dir(M1_STORE_BASE_DIR . 'language/' . $dirEntry) || $dirEntry == '.'
+        || $dirEntry == '..' || strpos($dirEntry, "_") !== false
+      ) {
         continue;
       }
 
@@ -428,75 +552,89 @@ class M1_Bridge_Action_Cubecart
   }
 }
 
+/**
+ * Class M1_Bridge_Action_Mysqlver
+ */
 class M1_Bridge_Action_Mysqlver
 {
-  function perform($bridge)
+
+  /**
+   * @param $bridge
+   */
+  public function perform(M1_Bridge $bridge)
   {
-    $m = array();
-    preg_match('/^(\d+)\.(\d+)\.(\d+)/', mysql_get_server_info($bridge->getLink()), $m);
-    echo sprintf("%d%02d%02d", $m[1], $m[2], $m[3]);
+    $message = array();
+    preg_match('/^(\d+)\.(\d+)\.(\d+)/', mysql_get_server_info($bridge->getLink()), $message);
+    echo sprintf("%d%02d%02d", $message[1], $message[2], $message[3]);
   }
 }
 
+/**
+ * Class M1_Bridge_Action_Clearcache
+ */
 class M1_Bridge_Action_Clearcache
 {
-  function perform($bridge)
+
+  /**
+   * @param M1_Bridge $bridge
+   */
+  public function perform(M1_Bridge $bridge)
   {
     switch($bridge->config->cartType) {
       case "Cubecart":
         $this->_CubecartClearCache();
-      break;
+        break;
       case "Prestashop11":
         $this->_PrestashopClearCache();
-      break;
+        break;
       case "Interspire":
         $this->_InterspireClearCache();
-      break;
+        break;
       case "Opencart14" :
         $this->_OpencartClearCache();
-      break;
+        break;
       case "XtcommerceVeyton" :
         $this->_Xtcommerce4ClearCache();
-      break;
+        break;
       case "Ubercart" :
         $this->_ubercartClearCache();
-      break;
+        break;
       case "Tomatocart" :
         $this->_tomatocartClearCache();
-      break;
+        break;
       case "Virtuemart113" :
         $this->_virtuemartClearCache();
-      break;
+        break;
       case "Magento1212" :
         //$this->_magentoClearCache();
-      break;
+        break;
       case "Oscommerce3":
         $this->_Oscommerce3ClearCache();
-      break;
+        break;
       case "Oxid":
         $this->_OxidClearCache();
-      break;
+        break;
       case "XCart":
         $this->_XcartClearCache();
-      break;
+        break;
       case "Cscart203":
         $this->_CscartClearCache();
-      break;
+        break;
       case "Prestashop15":
         $this->_Prestashop15ClearCache();
-      break;
+        break;
       case "Gambio":
         $this->_GambioClearCache();
-      break;
+        break;
     }
   }
 
   /**
-   *
-   * @var $fileExclude - name file in format pregmatch
+   * @param array  $dirs
+   * @param string $fileExclude - name file in format pregmatch
+   * @return bool
    */
-
-  function _removeGarbage($dirs = array(), $fileExclude = '')
+  private function _removeGarbage($dirs = array(), $fileExclude = '')
   {
     $result = true;
 
@@ -538,7 +676,7 @@ class M1_Bridge_Action_Clearcache
     return $result;
   }
 
-  function _magentoClearCache()
+  private function _magentoClearCache()
   {
     chdir('../');
 
@@ -567,7 +705,7 @@ class M1_Bridge_Action_Clearcache
     echo 'OK';
   }
 
-  function _InterspireClearCache()
+  private function _InterspireClearCache()
   {
     $res = true;
     $file = M1_STORE_BASE_DIR . 'cache' . DIRECTORY_SEPARATOR . 'datastore' . DIRECTORY_SEPARATOR . 'RootCategories.php';
@@ -583,7 +721,7 @@ class M1_Bridge_Action_Clearcache
     }
   }
 
-  function _CubecartClearCache()
+  private function _CubecartClearCache()
   {
     $ok = true;
 
@@ -614,7 +752,7 @@ class M1_Bridge_Action_Clearcache
     }
   }
 
-  function _PrestashopClearCache()
+  private function _PrestashopClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'tools/smarty/compile/',
@@ -625,7 +763,7 @@ class M1_Bridge_Action_Clearcache
     $this->_removeGarbage($dirs, 'index\.php');
   }
 
-  function _OpencartClearCache()
+  private function _OpencartClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'system/cache/',
@@ -634,7 +772,7 @@ class M1_Bridge_Action_Clearcache
     $this->_removeGarbage($dirs, 'index\.html');
   }
 
-  function _Xtcommerce4ClearCache()
+  private function _Xtcommerce4ClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'cache/',
@@ -643,7 +781,7 @@ class M1_Bridge_Action_Clearcache
     $this->_removeGarbage($dirs, 'index\.html');
   }
 
-  function _ubercartClearCache()
+  private function _ubercartClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'sites/default/files/imagecache/product/',
@@ -656,7 +794,7 @@ class M1_Bridge_Action_Clearcache
     $this->_removeGarbage($dirs);
   }
 
-  function _tomatocartClearCache()
+  private function _tomatocartClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'includes/work/',
@@ -668,7 +806,7 @@ class M1_Bridge_Action_Clearcache
   /**
    * Try chage permissions actually :)
    */
-  function _virtuemartClearCache()
+  private function _virtuemartClearCache()
   {
     $pathToImages = 'components/com_virtuemart/shop_image';
 
@@ -684,7 +822,7 @@ class M1_Bridge_Action_Clearcache
     }
   }
 
-  function _Oscommerce3ClearCache()
+  private function _Oscommerce3ClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'osCommerce/OM/Work/Cache/',
@@ -693,7 +831,7 @@ class M1_Bridge_Action_Clearcache
     $this->_removeGarbage($dirs, '\.htaccess');
   }
 
-  function _GambioClearCache()
+  private function _GambioClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'cache/',
@@ -702,7 +840,7 @@ class M1_Bridge_Action_Clearcache
     $this->_removeGarbage($dirs, 'index\.html');
   }
 
-  function _OxidClearCache()
+  private function _OxidClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'tmp/',
@@ -711,7 +849,7 @@ class M1_Bridge_Action_Clearcache
     $this->_removeGarbage($dirs, '\.htaccess');
   }
 
-  function _XcartClearCache()
+  private function _XcartClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'var/cache/',
@@ -720,7 +858,7 @@ class M1_Bridge_Action_Clearcache
     $this->_removeGarbage($dirs, '\.htaccess');
   }
 
-  function _CscartClearCache()
+  private function _CscartClearCache()
   {
     $dir = M1_STORE_BASE_DIR . 'var/cache/';
     $res = $this->removeDirRec($dir);
@@ -732,7 +870,7 @@ class M1_Bridge_Action_Clearcache
     }
   }
 
-  function _Prestashop15ClearCache()
+  private function _Prestashop15ClearCache()
   {
     $dirs = array(
       M1_STORE_BASE_DIR . 'cache/smarty/compile/',
@@ -743,7 +881,11 @@ class M1_Bridge_Action_Clearcache
     $this->_removeGarbage($dirs, 'index\.php');
   }
 
-  function removeDirRec($dir)
+  /**
+   * @param $dir
+   * @return bool
+   */
+  private function removeDirRec($dir)
   {
     $result = true;
 
@@ -769,29 +911,105 @@ class M1_Bridge_Action_Clearcache
   }
 }
 
+/**
+ * @author: Ihor Liubarskiy    i.lybarskuy@magneticone.com
+ * Date: 16.11.16 17:02
+ */
 
+class M1_Bridge_Action_Multiquery
+{
+  protected $_lastInsertIds = array();
+
+  /**
+   * @param M1_Bridge $bridge
+   * @return bool|null
+   */
+  public function perform(M1_Bridge $bridge)
+  {
+    if (isset($_POST['queries']) && isset($_POST['fetchMode'])) {
+
+      $queries = unserialize(base64_decode($_POST['queries']));
+      $result = false;
+      $count = 0;
+
+      foreach ($queries as $queryId => $query) {
+
+        if ($count++ > 0) {
+          $query = preg_replace_callback('/_A2C_LAST_\{([a-zA-Z0-9_\-]{1,32})\}_INSERT_ID_/', array($this, '_replace'), $query);
+        }
+
+        $res = $bridge->query($query, (int)$_POST['fetchMode']);
+        if (is_array($res['result']) || is_bool($res['result'])) {
+
+          $queryRes = array(
+            'res'           => $res['result'],
+            'fetchedFields' => @$res['fetchedFields'],
+            'insertId'      => $bridge->getLink()->getLastInsertId(),
+            'affectedRows'  => $bridge->getLink()->getAffectedRows(),
+          );
+
+          $result[$queryId] = $queryRes;
+          $this->_lastInsertIds[$queryId] = $queryRes['insertId'];
+          
+        } else {
+          echo base64_encode($res['message']);
+          return false;
+        }
+      }
+      echo base64_encode(serialize($result));
+    } else {
+      return false;
+    }
+  }
+
+  protected function _replace($matches)
+  {
+    return $this->_lastInsertIds[$matches[1]];
+  }
+}
+
+/**
+ * Class M1_Bridge_Action_Basedirfs
+ */
 class M1_Bridge_Action_Basedirfs
 {
-  function perform($bridge)
+
+  /**
+   * @param M1_Bridge $bridge
+   */
+  public function perform(M1_Bridge $bridge)
   {
     echo M1_STORE_BASE_DIR;
   }
 }
 
+/**
+ * Class M1_Bridge_Action_Phpinfo
+ */
 class M1_Bridge_Action_Phpinfo
 {
-  function perform($bridge)
+
+  /**
+   * @param M1_Bridge $bridge
+   */
+  public function perform(M1_Bridge $bridge)
   {
     phpinfo();
   }
 }
 
 
+/**
+ * Class M1_Bridge_Action_Savefile
+ */
 class M1_Bridge_Action_Savefile
 {
-  var $_imageType = null;
+  protected $_imageType = null;
 
-  function perform($bridge)
+  /**
+   * @param $bridge
+   */
+  public function perform(M1_Bridge $bridge)
   {
     $source      = $_POST['src'];
     $destination = $_POST['dst'];
@@ -802,7 +1020,15 @@ class M1_Bridge_Action_Savefile
     echo $this->_saveFile($source, $destination, $width, $height, $local);
   }
 
-  function _saveFile($source, $destination, $width, $height, $local = '')
+  /**
+   * @param $source
+   * @param $destination
+   * @param $width
+   * @param $height
+   * @param string $local
+   * @return string
+   */
+  public function _saveFile($source, $destination, $width, $height, $local = '')
   {
     if (trim($local) != '') {
 
@@ -846,7 +1072,14 @@ class M1_Bridge_Action_Savefile
     return $result;
   }
 
-  function _copyLocal($source, $destination, $width, $height)
+  /**
+   * @param $source
+   * @param $destination
+   * @param $width
+   * @param $height
+   * @return bool
+   */
+  private function _copyLocal($source, $destination, $width, $height)
   {
     $source = M1_STORE_BASE_DIR . $source;
     $destination = M1_STORE_BASE_DIR . $destination;
@@ -862,7 +1095,12 @@ class M1_Bridge_Action_Savefile
     return true;
   }
 
-  function _loadImage($filename, $skipJpg = true)
+  /**
+   * @param $filename
+   * @param bool $skipJpg
+   * @return bool|resource
+   */
+  private function _loadImage($filename, $skipJpg = true)
   {
     $imageInfo = @getimagesize($filename);
     if ($imageInfo === false) {
@@ -892,7 +1130,15 @@ class M1_Bridge_Action_Savefile
     return $image;
   }
 
-  function _saveImage($image, $filename, $imageType = IMAGETYPE_JPEG, $compression = 85, $permissions = null)
+  /**
+   * @param $image
+   * @param $filename
+   * @param int $imageType
+   * @param int $compression
+   * @param null $permissions
+   * @return bool
+   */
+  private function _saveImage($image, $filename, $imageType = IMAGETYPE_JPEG, $compression = 85, $permissions = null)
   {
     $result = true;
     if ($imageType == IMAGETYPE_JPEG) {
@@ -912,9 +1158,14 @@ class M1_Bridge_Action_Savefile
     return $result;
   }
 
-  function _createFile($source, $destination)
+  /**
+   * @param $source
+   * @param $destination
+   * @return string
+   */
+  private function _createFile($source, $destination)
   {
-    if ($this->_create_dir(dirname($destination)) !== false) {
+    if ($this->_createDir(dirname($destination)) !== false) {
       $destination = M1_STORE_BASE_DIR . $destination;
       $body = base64_decode($source);
       if ($body === false || file_put_contents($destination, $body) === false) {
@@ -927,12 +1178,17 @@ class M1_Bridge_Action_Savefile
     return '[BRIDGE ERROR] Directory creation failed!';
   }
 
-  function _saveFileLocal($source, $destination)
+  /**
+   * @param $source
+   * @param $destination
+   * @return string
+   */
+  private function _saveFileLocal($source, $destination)
   {
     $srcInfo = parse_url($source);
     $src = rtrim($_SERVER['DOCUMENT_ROOT'], "/") . $srcInfo['path'];
 
-    if ($this->_create_dir(dirname($destination)) !== false) {
+    if ($this->_createDir(dirname($destination)) !== false) {
       $dst = M1_STORE_BASE_DIR . $destination;
 
       if (!@copy($src, $dst)) {
@@ -946,10 +1202,15 @@ class M1_Bridge_Action_Savefile
     return "OK";
   }
 
-  function _saveFileCurl($source, $destination)
+  /**
+   * @param $source
+   * @param $destination
+   * @return string
+   */
+  private function _saveFileCurl($source, $destination)
   {
     $source = $this->_escapeSource($source);
-    if ($this->_create_dir(dirname($destination)) !== false) {
+    if ($this->_createDir(dirname($destination)) !== false) {
       $destination = M1_STORE_BASE_DIR . $destination;
 
       $ch = curl_init();
@@ -958,6 +1219,7 @@ class M1_Bridge_Action_Savefile
       curl_setopt($ch, CURLOPT_TIMEOUT, 60);
       curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.1) Gecko/20061204 Firefox/2.0.0.1");
       curl_setopt($ch, CURLOPT_NOBODY, true);
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_exec($ch);
       $httpResponseCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
@@ -978,7 +1240,7 @@ class M1_Bridge_Action_Savefile
         return "[BRIDGE ERROR] $error_no: " . curl_error($ch);
       }
       curl_close($ch);
-      @chmod($destination, 0777);
+      @chmod($destination, 0755);
 
       return "OK";
 
@@ -987,12 +1249,21 @@ class M1_Bridge_Action_Savefile
     }
   }
 
-  function _escapeSource($source)
+  /**
+   * @param $source
+   * @return mixed
+   */
+  private function _escapeSource($source)
   {
     return str_replace(" ", "%20", $source);
   }
 
-  function _create_dir($dir) {
+  /**
+   * @param $dir
+   * @return bool
+   */
+  private function _createDir($dir)
+  {
     $dirParts = explode("/", $dir);
     $path = M1_STORE_BASE_DIR;
     foreach ($dirParts as $item) {
@@ -1011,7 +1282,11 @@ class M1_Bridge_Action_Savefile
     return true;
   }
 
-  function _isSameHost($source)
+  /**
+   * @param $source
+   * @return bool
+   */
+  private function _isSameHost($source)
   {
     $srcInfo = parse_url($source);
 
@@ -1028,14 +1303,14 @@ class M1_Bridge_Action_Savefile
   }
 
   /**
-   * @param $image     - GD image object
-   * @param $filename  - store sorce pathfile ex. M1_STORE_BASE_DIR . '/img/c/2.gif';
-   * @param $type      - IMAGETYPE_JPEG, IMAGETYPE_GIF or IMAGETYPE_PNG
-   * @param $extension - file extension, this use for jpg or jpeg extension in prestashop
+   * @param resource $image     - GD image object
+   * @param string   $filename  - store sorce pathfile ex. M1_STORE_BASE_DIR . '/img/c/2.gif';
+   * @param int      $type      - IMAGETYPE_JPEG, IMAGETYPE_GIF or IMAGETYPE_PNG
+   * @param string   $extension - file extension, this use for jpg or jpeg extension in prestashop
    *
    * @return true if success or false if no
    */
-  function _convert($image, $filename, $type = IMAGETYPE_JPEG, $extension = '')
+  private function _convert($image, $filename, $type = IMAGETYPE_JPEG, $extension = '')
   {
     $end = pathinfo($filename, PATHINFO_EXTENSION);
 
@@ -1065,7 +1340,13 @@ class M1_Bridge_Action_Savefile
     return $this->_saveImage($newImage, $pathSave, $type);
   }
 
-  function _scaled($destination, $width, $height)
+  /**
+   * @param $destination
+   * @param $width
+   * @param $height
+   * @return string|void
+   */
+  private function _scaled($destination, $width, $height)
   {
     $image = $this->_loadImage($destination, false);
 
@@ -1094,8 +1375,15 @@ class M1_Bridge_Action_Savefile
     return $this->_saveImage($newImage, $destination, $this->_imageType, 100) ? "OK" : "CAN'T SCALE IMAGE";
   }
 
-  //scaled2 method optimizet for prestashop
-  function _scaled2($destination, $destWidth, $destHeight)
+  /**
+   * scaled2 method optimizet for prestashop
+   *
+   * @param $destination
+   * @param $destWidth
+   * @param $destHeight
+   * @return string
+   */
+  private function _scaled2($destination, $destWidth, $destHeight)
   {
     $method = 0;
 
@@ -1150,9 +1438,9 @@ class M1_Bridge_Action_Savefile
 
 class M1_Mysqli
 {
-  var $config = null; // config adapter
-  var $result = array();
-  var $dataBaseHandle = null;
+  public $config = null; // config adapter
+  public $result = array();
+  public $dataBaseHandle = null;
 
   /**
    * mysql constructor
@@ -1160,7 +1448,7 @@ class M1_Mysqli
    * @param M1_Config_Adapter $config
    * @return M1_Mysql
    */
-  function M1_Mysqli($config)
+  public function __construct($config)
   {
     $this->config = $config;
   }
@@ -1168,7 +1456,7 @@ class M1_Mysqli
   /**
    * @return bool|null|resource
    */
-  function getDataBaseHandle()
+  private function getDataBaseHandle()
   {
     if ($this->dataBaseHandle) {
       return $this->dataBaseHandle;
@@ -1186,26 +1474,26 @@ class M1_Mysqli
   /**
    * @return bool|null|resource
    */
-  function connect()
+  private function connect()
   {
     $triesCount = 10;
     $link = null;
-    $host = $this->config->Host . ($this->config->Port ? ':' . $this->config->Port : '');
-    $password = stripslashes($this->config->Password);
+    $host = $this->config->host . ($this->config->port ? ':' . $this->config->port : '');
+    $password = stripslashes($this->config->password);
 
     while (!$link) {
       if (!$triesCount--) {
         break;
       }
 
-      $link = @mysqli_connect($host, $this->config->Username, $password);
+      $link = @mysqli_connect($host, $this->config->username, $password);
       if (!$link) {
         sleep(5);
       }
     }
 
     if ($link) {
-      mysqli_select_db($link, $this->config->Dbname);
+      mysqli_select_db($link, $this->config->dbname);
     } else {
       return false;
     }
@@ -1218,7 +1506,7 @@ class M1_Mysqli
    *
    * @return array|bool|mysqli_result
    */
-  function localQuery($sql)
+  public function localQuery($sql)
   {
     $result = array();
     $dataBaseHandle = $this->getDataBaseHandle();
@@ -1242,11 +1530,12 @@ class M1_Mysqli
    *
    * @return array
    */
-  function query($sql, $fetchType)
+  public function query($sql, $fetchType)
   {
     $result = array(
       'result'        => null,
-      'message'       => ''
+      'message'       => '',
+      'fetchedFields' => ''
     );
 
     $dataBaseHandle = $this->getDataBaseHandle();
@@ -1309,6 +1598,11 @@ class M1_Mysqli
       return $result;
     }
 
+    if (is_bool($res)) {
+      $result['result'] = $res;
+      return $result;
+    }
+
     $fetchedFields = array();
     while ($field = mysqli_fetch_field($res)) {
       $fetchedFields[] = $field;
@@ -1335,7 +1629,7 @@ class M1_Mysqli
   /**
    * @return int
    */
-  function getLastInsertId()
+  public function getLastInsertId()
   {
     return mysqli_insert_id($this->dataBaseHandle);
   }
@@ -1343,7 +1637,7 @@ class M1_Mysqli
   /**
    * @return int
    */
-  function getAffectedRows()
+  public function getAffectedRows()
   {
     return mysqli_affected_rows($this->dataBaseHandle);
   }
@@ -1351,7 +1645,7 @@ class M1_Mysqli
   /**
    * @return void
    */
-  function __destruct()
+  public function __destruct()
   {
     if ($this->dataBaseHandle) {
       mysqli_close($this->dataBaseHandle);
@@ -1363,47 +1657,16 @@ class M1_Mysqli
 }
 
 
-class M1_Config_Adapter_Woocommerce extends M1_Config_Adapter
-{
-  function M1_Config_Adapter_Woocommerce()
-  {
-    //@include_once M1_STORE_BASE_DIR . "wp-config.php";
-    if (file_exists(M1_STORE_BASE_DIR . 'wp-config.php')) {
-      $config = file_get_contents(M1_STORE_BASE_DIR . 'wp-config.php');
-    } else {
-      $config = file_get_contents(dirname(M1_STORE_BASE_DIR) . '/wp-config.php');
-    }
-
-    preg_match('/define\s*\(\s*\'DB_NAME\',\s*\'(.+)\'\s*\)\s*;/', $config, $match);
-    $this->Dbname   = $match[1];
-    preg_match('/define\s*\(\s*\'DB_USER\',\s*\'(.+)\'\s*\)\s*;/', $config, $match);
-    $this->Username = $match[1];
-    preg_match('/define\s*\(\s*\'DB_PASSWORD\',\s*\'(.*)\'\s*\)\s*;/', $config, $match);
-    $this->Password = $match[1];
-    preg_match('/define\s*\(\s*\'DB_HOST\',\s*\'(.+)\'\s*\)\s*;/', $config, $match);
-    $this->setHostPort( $match[1] );
-    preg_match('/\$table_prefix\s*=\s*\'(.*)\'\s*;/', $config, $match);
-    $this->TblPrefix = $match[1];
-    $version = $this->getCartVersionFromDb("option_value", "options", "option_name = 'woocommerce_db_version'");
-    
-    if ( $version != '' ) {
-      $this->cartVars['dbVersion'] = $version;
-    }    
-    
-    $this->cartVars['categoriesDirRelative'] = 'images/categories/';
-    $this->cartVars['productsDirRelative'] = 'images/products/';    
-    $this->imagesDir = "wp-content/uploads/images/";
-    $this->categoriesImagesDir    = $this->imagesDir . 'categories/';
-    $this->productsImagesDir      = $this->imagesDir . 'products/';
-    $this->manufacturersImagesDir = $this->imagesDir;		
-  }
-}
-
-
-
+/**
+ * Class M1_Config_Adapter_Ubercart
+ */
 class M1_Config_Adapter_Ubercart extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Ubercart()
+
+  /**
+   * M1_Config_Adapter_Ubercart constructor.
+   */
+  public function __construct()
   {
     @include_once M1_STORE_BASE_DIR . "sites/default/settings.php";
 
@@ -1420,18 +1683,18 @@ class M1_Config_Adapter_Ubercart extends M1_Config_Adapter
     }
 
     $this->setHostPort( $url['host'] );
-    $this->Dbname   = ltrim( $url['path'], '/' );
-    $this->Username = $url['user'];
-    $this->Password = $url['pass'];
+    $this->dbname   = ltrim( $url['path'], '/' );
+    $this->username = $url['user'];
+    $this->password = $url['pass'];
 
     $this->imagesDir = "/sites/default/files/";
-    if( !file_exists( M1_STORE_BASE_DIR . $this->imagesDir ) ) {
+    if (!file_exists(M1_STORE_BASE_DIR . $this->imagesDir)) {
       $this->imagesDir = "/files";
     }
 
-    if ( file_exists(M1_STORE_BASE_DIR . "/modules/ubercart/uc_cart/uc_cart.info") ) {
+    if (file_exists(M1_STORE_BASE_DIR . "/modules/ubercart/uc_cart/uc_cart.info")) {
       $str = file_get_contents(M1_STORE_BASE_DIR . "/modules/ubercart/uc_cart/uc_cart.info");
-      if ( preg_match('/version\s+=\s+".+-(.+)"/', $str, $match) != 0 ) {
+      if (preg_match('/version\s+=\s+".+-(.+)"/', $str, $match) != 0) {
         $this->cartVars['dbVersion'] = $match[1];
         unset($match);
       }
@@ -1441,20 +1704,28 @@ class M1_Config_Adapter_Ubercart extends M1_Config_Adapter
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_Cubecart3
+ */
 class M1_Config_Adapter_Cubecart3 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Cubecart3()
+
+  /**
+   * M1_Config_Adapter_Cubecart3 constructor.
+   */
+  public function __construct()
   {
     include_once(M1_STORE_BASE_DIR . 'includes/global.inc.php');
 
     $this->setHostPort($glob['dbhost']);
-    $this->Dbname = $glob['dbdatabase'];
-    $this->Username = $glob['dbusername'];
-    $this->Password = $glob['dbpassword'];
+    $this->dbname = $glob['dbdatabase'];
+    $this->username = $glob['dbusername'];
+    $this->password = $glob['dbpassword'];
 
     $this->imagesDir = 'images/uploads';
     $this->categoriesImagesDir    = $this->imagesDir;
@@ -1463,9 +1734,16 @@ class M1_Config_Adapter_Cubecart3 extends M1_Config_Adapter
   }
 }
 
+/**
+ * Class M1_Config_Adapter_JooCart
+ */
 class M1_Config_Adapter_JooCart extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_JooCart()
+
+  /**
+   * M1_Config_Adapter_JooCart constructor.
+   */
+  public function __construct()
   {
     require_once M1_STORE_BASE_DIR . "/configuration.php";
 
@@ -1474,30 +1752,37 @@ class M1_Config_Adapter_JooCart extends M1_Config_Adapter
       $jconfig = new JConfig();
 
       $this->setHostPort($jconfig->host);
-      $this->Dbname   = $jconfig->db;
-      $this->Username = $jconfig->user;
-      $this->Password = $jconfig->password;
+      $this->dbname   = $jconfig->db;
+      $this->username = $jconfig->user;
+      $this->password = $jconfig->password;
 
     } else {
 
       $this->setHostPort($mosConfig_host);
-      $this->Dbname   = $mosConfig_db;
-      $this->Username = $mosConfig_user;
-      $this->Password = $mosConfig_password;
+      $this->dbname   = $mosConfig_db;
+      $this->username = $mosConfig_user;
+      $this->password = $mosConfig_password;
     }
-
 
     $this->imagesDir              = "components/com_opencart/image/";
     $this->categoriesImagesDir    = $this->imagesDir;
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
   }
+
 }
 
 
+/**
+ * Class M1_Config_Adapter_Prestashop11
+ */
 class M1_Config_Adapter_Prestashop11 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Prestashop11()
+
+  /**
+   * M1_Config_Adapter_Prestashop11 constructor.
+   */
+  public function __construct()
   {
     $confFileOne = file_get_contents(M1_STORE_BASE_DIR . "/config/settings.inc.php");
     $confFileTwo = file_get_contents(M1_STORE_BASE_DIR . "/config/config.inc.php");
@@ -1525,7 +1810,9 @@ class M1_Config_Adapter_Prestashop11 extends M1_Config_Adapter
       }
 
       if (preg_match("/^(\s*)define\(/i", $line)) {
-        if ((strpos($line, '_DB_') !== false) || (strpos($line, '_PS_IMG_DIR_') !== false) || (strpos($line, '_PS_VERSION_') !== false)) {
+        if ((strpos($line, '_DB_') !== false) || (strpos($line, '_PS_IMG_DIR_') !== false)
+          || (strpos($line, '_PS_VERSION_') !== false)
+        ) {
           $execute .= " " . $line;
         }
       }
@@ -1535,9 +1822,9 @@ class M1_Config_Adapter_Prestashop11 extends M1_Config_Adapter
     eval($execute);
 
     $this->setHostPort(_DB_SERVER_);
-    $this->Dbname   = _DB_NAME_;
-    $this->Username = _DB_USER_;
-    $this->Password = _DB_PASSWD_;
+    $this->dbname   = _DB_NAME_;
+    $this->username = _DB_USER_;
+    $this->password = _DB_PASSWD_;
 
     if (defined('_PS_IMG_DIR_') && defined('_PS_ROOT_DIR_')) {
 
@@ -1556,13 +1843,21 @@ class M1_Config_Adapter_Prestashop11 extends M1_Config_Adapter
       $this->cartVars['dbVersion'] = _PS_VERSION_;
     }
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_Ubercart3
+ */
 class M1_Config_Adapter_Ubercart3 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Ubercart3()
+
+  /**
+   * M1_Config_Adapter_Ubercart3 constructor.
+   */
+  public function __construct()
   {
     @include_once M1_STORE_BASE_DIR . "sites/default/settings.php";
 
@@ -1577,9 +1872,9 @@ class M1_Config_Adapter_Ubercart3 extends M1_Config_Adapter
     }
 
     $this->setHostPort( $url['host'] );
-    $this->Dbname   = ltrim( $url['database'], '/' );
-    $this->Username = $url['username'];
-    $this->Password = $url['password'];
+    $this->dbname   = ltrim( $url['database'], '/' );
+    $this->username = $url['username'];
+    $this->password = $url['password'];
 
     $this->imagesDir = "/sites/default/files/";
     if (!file_exists( M1_STORE_BASE_DIR . $this->imagesDir )) {
@@ -1599,49 +1894,68 @@ class M1_Config_Adapter_Ubercart3 extends M1_Config_Adapter
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
   }
+
 }
 
 
+/**
+ * Class M1_Config_Adapter_XCart
+ */
 class M1_Config_Adapter_XCart extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_XCart()
+
+  /**
+   * M1_Config_Adapter_XCart constructor.
+   */
+  public function __construct()
   {
     define('XCART_START', 1);
 
     $config = file_get_contents(M1_STORE_BASE_DIR . "config.php");
 
-    preg_match('/\$sql_host.+\'(.+)\';/', $config, $match);
-    $this->setHostPort( $match[1] );
-    preg_match('/\$sql_user.+\'(.+)\';/', $config, $match);
-    $this->Username = $match[1];
-    preg_match('/\$sql_db.+\'(.+)\';/', $config, $match);
-    $this->Dbname   = $match[1];
-    preg_match('/\$sql_password.+\'(.*)\';/', $config, $match);
-    $this->Password = $match[1];
-
+    try {
+      preg_match('/\$sql_host.+\'(.+)\';/', $config, $match);
+      $this->setHostPort($match[1]);
+      preg_match('/\$sql_user.+\'(.+)\';/', $config, $match);
+      $this->username = $match[1];
+      preg_match('/\$sql_db.+\'(.+)\';/', $config, $match);
+      $this->dbname = $match[1];
+      preg_match('/\$sql_password.+\'(.*)\';/', $config, $match);
+      $this->password = $match[1];
+    } catch (Exception $e) {
+      die('ERROR_READING_STORE_CONFIG_FILE');
+    }
+    
     $this->imagesDir = 'images/'; // xcart starting from 4.1.x hardcodes images location
     $this->categoriesImagesDir    = $this->imagesDir;
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
 
-    if(file_exists(M1_STORE_BASE_DIR . "VERSION")) {
+    if (file_exists(M1_STORE_BASE_DIR . "VERSION")) {
       $version = file_get_contents(M1_STORE_BASE_DIR . "VERSION");
-      $this->cartVars['dbVersion'] = preg_replace('/(Version| |\\n)/','',$version);
+      $this->cartVars['dbVersion'] = preg_replace('/(Version| |\\n)/', '', $version);
     }
 
   }
 }
 
+/**
+ * Class M1_Config_Adapter_Cubecart
+ */
 class M1_Config_Adapter_Cubecart extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Cubecart()
+
+  /**
+   * M1_Config_Adapter_Cubecart constructor.
+   */
+  public function __construct()
   {
     include_once(M1_STORE_BASE_DIR . 'includes/global.inc.php');
 
     $this->setHostPort($glob['dbhost']);
-    $this->Dbname = $glob['dbdatabase'];
-    $this->Username = $glob['dbusername'];
-    $this->Password = $glob['dbpassword'];
+    $this->dbname = $glob['dbdatabase'];
+    $this->username = $glob['dbusername'];
+    $this->password = $glob['dbpassword'];
 
     $this->imagesDir = 'images';
     $this->categoriesImagesDir    = $this->imagesDir;
@@ -1661,35 +1975,35 @@ class M1_Config_Adapter_Cubecart extends M1_Config_Adapter
         continue;
       }
       $configXml = simplexml_load_file(M1_STORE_BASE_DIR . 'language/'.$dirEntry);
-      if ($configXml->info->title){
+      if ($configXml->info->title) {
         $lang['name'] = (string)$configXml->info->title;
-        $lang['code'] = substr((string)$configXml->info->code,0,2);
-        $lang['locale'] = substr((string)$configXml->info->code,0,2);
+        $lang['code'] = substr((string)$configXml->info->code, 0, 2);
+        $lang['locale'] = substr((string)$configXml->info->code, 0, 2);
         $lang['currency'] = (string)$configXml->info->default_currency;
-        $lang['fileName'] = str_replace(".xml","",$dirEntry);
+        $lang['fileName'] = str_replace(".xml", "", $dirEntry);
         $languages[] = $lang;
       }
     }
     if (!empty($languages)) {
       $this->cartVars['languages'] = $languages;
     }
-    if ( file_exists(M1_STORE_BASE_DIR  . 'ini.inc.php') ) {
+    if (file_exists(M1_STORE_BASE_DIR  . 'ini.inc.php')) {
       $conf = file_get_contents (M1_STORE_BASE_DIR . 'ini.inc.php');
       preg_match("/ini\['ver'\].*/", $conf, $match);
       if (isset($match[0]) && !empty($match[0])) {
         preg_match("/\d.*/", $match[0], $project);
-          if (isset($project[0]) && !empty($project[0])) {
-            $version = $project[0];
-            $version = str_replace(array(" ","-","_","'",");",";",")"), "", $version);
-            if ($version != '') {
-              $this->cartVars['dbVersion'] = strtolower($version);
-            }
+        if (isset($project[0]) && !empty($project[0])) {
+          $version = $project[0];
+          $version = str_replace(array(" ","-","_","'",");",";",")"), "", $version);
+          if ($version != '') {
+            $this->cartVars['dbVersion'] = strtolower($version);
           }
+        }
       } else {
         preg_match("/define\('CC_VERSION.*/", $conf, $match);
         if (isset($match[0]) && !empty($match[0])) {
           preg_match("/\d.*/", $match[0], $project);
-          if (isset($project[0]) && !empty($project[0])){
+          if (isset($project[0]) && !empty($project[0])) {
             $version = $project[0];
             $version = str_replace(array(" ","-","_","'",");",";",")"), "", $version);
             if ($version != '') {
@@ -1699,7 +2013,7 @@ class M1_Config_Adapter_Cubecart extends M1_Config_Adapter
         }
 
       }
-    } elseif ( file_exists(M1_STORE_BASE_DIR . "includes" . DIRECTORY_SEPARATOR . 'ini.inc.php') ) {
+    } elseif (file_exists(M1_STORE_BASE_DIR . "includes" . DIRECTORY_SEPARATOR . 'ini.inc.php')) {
       $conf = file_get_contents (M1_STORE_BASE_DIR . "includes" . DIRECTORY_SEPARATOR . 'ini.inc.php');
       preg_match("/ini\['ver'\].*/", $conf, $match);
       if (isset($match[0]) && !empty($match[0])) {
@@ -1728,9 +2042,16 @@ class M1_Config_Adapter_Cubecart extends M1_Config_Adapter
   }
 }
 
+/**
+ * Class M1_Config_Adapter_WebAsyst
+ */
 class M1_Config_Adapter_WebAsyst extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_WebAsyst()
+
+  /**
+   * M1_Config_Adapter_WebAsyst constructor.
+   */
+  public function __construct()
   {
     $config = simplexml_load_file(M1_STORE_BASE_DIR . 'kernel/wbs.xml');
 
@@ -1741,32 +2062,39 @@ class M1_Config_Adapter_WebAsyst extends M1_Config_Adapter
     $host = (string)$config->DBSETTINGS['SQLSERVER'];
 
     $this->setHostPort($host);
-    $this->Dbname = (string)$config->DBSETTINGS['DB_NAME'];
-    $this->Username = (string)$config->DBSETTINGS['DB_USER'];
-    $this->Password = (string)$config->DBSETTINGS['DB_PASSWORD'];
+    $this->dbname = (string)$config->DBSETTINGS['DB_NAME'];
+    $this->username = (string)$config->DBSETTINGS['DB_USER'];
+    $this->password = (string)$config->DBSETTINGS['DB_PASSWORD'];
 
     $this->imagesDir = 'published/publicdata/'.strtoupper($dbKey).'/attachments/SC/products_pictures';
     $this->categoriesImagesDir    = $this->imagesDir;
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
 
-    if ( isset($config->VERSIONS['SYSTEM']) ) {
+    if (isset($config->VERSIONS['SYSTEM'])) {
       $this->cartVars['dbVersion'] = (string)$config->VERSIONS['SYSTEM'];
     }
   }
 
 }
 
+/**
+ * Class M1_Config_Adapter_Squirrelcart242
+ */
 class M1_Config_Adapter_Squirrelcart242 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Squirrelcart242()
+
+  /**
+   * M1_Config_Adapter_Squirrelcart242 constructor.
+   */
+  public function __construct()
   {
     include_once(M1_STORE_BASE_DIR . 'squirrelcart/config.php');
 
     $this->setHostPort($sql_host);
-    $this->Dbname      = $db;
-    $this->Username    = $sql_username;
-    $this->Password    = $sql_password;
+    $this->dbname      = $db;
+    $this->username    = $sql_username;
+    $this->password    = $sql_password;
 
     $this->imagesDir                 = $img_path;
     $this->categoriesImagesDir       = $img_path . "/categories";
@@ -1774,42 +2102,49 @@ class M1_Config_Adapter_Squirrelcart242 extends M1_Config_Adapter
     $this->manufacturersImagesDir    = $img_path;
 
     $version = $this->getCartVersionFromDb("DB_Version", "Store_Information", "record_number = 1");
-    if ( $version != '' ) {
+    if ($version != '' ) {
       $this->cartVars['dbVersion'] = $version;
     }
   }
 }
 
+/**
+ * Class M1_Config_Adapter_Opencart14
+ */
 class M1_Config_Adapter_Opencart14 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Opencart14()
-  {
-    include_once( M1_STORE_BASE_DIR . "/config.php");
 
-    if( defined('DB_HOST') ) {
+  /**
+   * M1_Config_Adapter_Opencart14 constructor.
+   */
+  public function __construct()
+  {
+    include_once (M1_STORE_BASE_DIR . "/config.php");
+
+    if (defined('DB_HOST')) {
       $this->setHostPort(DB_HOST);
     } else {
       $this->setHostPort(DB_HOSTNAME);
     }
 
-    if( defined('DB_USER') ) {
-      $this->Username = DB_USER;
+    if (defined('DB_USER')) {
+      $this->username = DB_USER;
     } else {
-      $this->Username = DB_USERNAME;
+      $this->username = DB_USERNAME;
     }
 
-    $this->Password = DB_PASSWORD;
+    $this->password = DB_PASSWORD;
 
-    if( defined('DB_NAME') ) {
-      $this->Dbname   = DB_NAME;
+    if (defined('DB_NAME')) {
+      $this->dbname   = DB_NAME;
     } else {
-      $this->Dbname   = DB_DATABASE;
+      $this->dbname   = DB_DATABASE;
     }
 
     $indexFileContent = '';
     $startupFileContent = '';
 
-    if ( file_exists(M1_STORE_BASE_DIR . "/index.php") ) {
+    if (file_exists(M1_STORE_BASE_DIR . "/index.php")) {
       $indexFileContent = file_get_contents(M1_STORE_BASE_DIR . "/index.php");
     }
 
@@ -1817,11 +2152,11 @@ class M1_Config_Adapter_Opencart14 extends M1_Config_Adapter
       $startupFileContent = file_get_contents(M1_STORE_BASE_DIR . "/system/startup.php");
     }
 
-    if ( preg_match("/define\('\VERSION\'\, \'(.+)\'\)/", $indexFileContent, $match) == 0 ) {
+    if (preg_match("/define\('\VERSION\'\, \'(.+)\'\)/", $indexFileContent, $match) == 0 ) {
       preg_match("/define\('\VERSION\'\, \'(.+)\'\)/", $startupFileContent, $match);
-    }      
+    }
 
-    if ( count($match) > 0 ) {
+    if (count($match) > 0) {
       $this->cartVars['dbVersion'] = $match[1];
       unset($match);
     }
@@ -1832,59 +2167,80 @@ class M1_Config_Adapter_Opencart14 extends M1_Config_Adapter
     $this->manufacturersImagesDir = $this->imagesDir;
 
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_Litecommerce
+ */
 class M1_Config_Adapter_Litecommerce extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Litecommerce()
+
+  /**
+   * M1_Config_Adapter_Litecommerce constructor.
+   */
+  public function __construct()
   {
-    if ((file_exists(M1_STORE_BASE_DIR .'/etc/config.php'))){
+    if ((file_exists(M1_STORE_BASE_DIR .'/etc/config.php'))) {
       $file = M1_STORE_BASE_DIR .'/etc/config.php';
-      $this->imagesDir = "/images"; 
+      $this->imagesDir = "/images";
       $this->categoriesImagesDir    = $this->imagesDir."/category";
       $this->productsImagesDir      = $this->imagesDir."/product";
       $this->manufacturersImagesDir = $this->imagesDir;
-    } elseif(file_exists(M1_STORE_BASE_DIR .'/modules/lc_connector/litecommerce/etc/config.php')) {
+    } elseif (file_exists(M1_STORE_BASE_DIR .'/modules/lc_connector/litecommerce/etc/config.php')) {
       $file = M1_STORE_BASE_DIR .'/modules/lc_connector/litecommerce/etc/config.php';
-      $this->imagesDir = "/modules/lc_connector/litecommerce/images"; 
+      $this->imagesDir = "/modules/lc_connector/litecommerce/images";
       $this->categoriesImagesDir    = $this->imagesDir."/category";
       $this->productsImagesDir      = $this->imagesDir."/product";
       $this->manufacturersImagesDir = $this->imagesDir;
     }
 
-    $settings = parse_ini_file($file);
-    $this->Host      = $settings['hostspec'];
+    $settings = parse_ini_file($file, true);
+    $settings = $settings['database_details'];
+    $this->host      = $settings['hostspec'];
     $this->setHostPort($settings['hostspec']);
-    $this->Username  = $settings['username'];
-    $this->Password  = $settings['password'];
-    $this->Dbname    = $settings['database'];
-    $this->TblPrefix = $settings['table_prefix'];
+    $this->username  = $settings['username'];
+    $this->password  = $settings['password'];
+    $this->dbname    = $settings['database'];
+    $this->tblPrefix = $settings['table_prefix'];
 
-    $version = $this->getCartVersionFromDb("value", "config", "name = 'version'");	
-    if ( $version != '' ) {
+    $version = $this->getCartVersionFromDb("value", "config", "name = 'version'");
+    if ($version != '') {
       $this->cartVars['dbVersion'] = $version;
     }
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_Oxid
+ */
 class M1_Config_Adapter_Oxid extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Oxid()
+
+  /**
+   * M1_Config_Adapter_Oxid constructor.
+   */
+  public function __construct()
   {
     //@include_once M1_STORE_BASE_DIR . "config.inc.php";
     $config = file_get_contents(M1_STORE_BASE_DIR . "config.inc.php");
-    preg_match("/dbName(.+)?=(.+)?\'(.+)\';/", $config, $match);
-    $this->Dbname   = $match[3];
-    preg_match("/dbUser(.+)?=(.+)?\'(.+)\';/", $config, $match);
-    $this->Username = $match[3];
-    preg_match("/dbPwd(.+)?=(.+)?\'(.+)\';/", $config, $match);
-    $this->Password = isset($match[3])?$match[3]:'';
-    preg_match("/dbHost(.+)?=(.+)?\'(.*)\';/", $config, $match);
-    $this->setHostPort($match[3]);
+    try {
+      preg_match("/dbName(.+)?=(.+)?\'(.+)\';/", $config, $match);
+      $this->dbname   = $match[3];
+      preg_match("/dbUser(.+)?=(.+)?\'(.+)\';/", $config, $match);
+      $this->username = $match[3];
+      preg_match("/dbPwd(.+)?=(.+)?\'(.+)\';/", $config, $match);
+      $this->password = isset($match[3]) ? $match[3] : '';
+      preg_match("/dbHost(.+)?=(.+)?\'(.*)\';/", $config, $match);
+      $this->setHostPort($match[3]);
+    } catch (Exception $e) {
+      die('ERROR_READING_STORE_CONFIG_FILE');
+    }
 
     //check about last slash
     $this->imagesDir = "out/pictures/";
@@ -1894,21 +2250,29 @@ class M1_Config_Adapter_Oxid extends M1_Config_Adapter
 
     //add key for decoding config values in oxid db
     //check slash
-    $key_config_file = file_get_contents(M1_STORE_BASE_DIR .'/core/oxconfk.php');
-    preg_match("/sConfigKey(.+)?=(.+)?\"(.+)?\";/", $key_config_file, $match);
+    $keyConfigFile = file_get_contents(M1_STORE_BASE_DIR . '/core/oxconfk.php');
+    preg_match("/sConfigKey(.+)?=(.+)?\"(.+)?\";/", $keyConfigFile, $match);
     $this->cartVars['sConfigKey'] = $match[3];
     $version = $this->getCartVersionFromDb("OXVERSION", "oxshops", "OXACTIVE=1 LIMIT 1" );
-    if ( $version != '' ) {
+    if ($version != '') {
       $this->cartVars['dbVersion'] = $version;
-    } 
+    }
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_XtcommerceVeyton
+ */
 class M1_Config_Adapter_XtcommerceVeyton extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_XtcommerceVeyton()
+
+  /**
+   * M1_Config_Adapter_XtcommerceVeyton constructor.
+   */
+  public function __construct()
   {
     define('_VALID_CALL','TRUE');
     define('_SRV_WEBROOT','TRUE');
@@ -1923,14 +2287,14 @@ class M1_Config_Adapter_XtcommerceVeyton extends M1_Config_Adapter
                 . 'paths.php';
 
     $this->setHostPort(_SYSTEM_DATABASE_HOST);
-    $this->Dbname = _SYSTEM_DATABASE_DATABASE;
-    $this->Username = _SYSTEM_DATABASE_USER;
-    $this->Password = _SYSTEM_DATABASE_PWD;
+    $this->dbname = _SYSTEM_DATABASE_DATABASE;
+    $this->username = _SYSTEM_DATABASE_USER;
+    $this->password = _SYSTEM_DATABASE_PWD;
     $this->imagesDir = _SRV_WEB_IMAGES;
-    $this->TblPrefix = DB_PREFIX . "_";
+    $this->tblPrefix = DB_PREFIX . "_";
 
     $version = $this->getCartVersionFromDb("config_value", "config", "config_key = '_SYSTEM_VERSION'");
-    if ( $version != '' ) {
+    if ($version != '') {
       $this->cartVars['dbVersion'] = $version;
     }
 
@@ -1938,21 +2302,29 @@ class M1_Config_Adapter_XtcommerceVeyton extends M1_Config_Adapter
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
   }
+
 }
 
 
+/**
+ * Class M1_Config_Adapter_SSPremium
+ */
 class M1_Config_Adapter_SSPremium extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_SSPremium()
+
+  /**
+   * M1_Config_Adapter_SSPremium constructor.
+   */
+  public function __construct()
   {
-    if ( file_exists(M1_STORE_BASE_DIR . 'cfg/connect.inc.php') ){
+    if (file_exists(M1_STORE_BASE_DIR . 'cfg/connect.inc.php')) {
       $config = file_get_contents(M1_STORE_BASE_DIR . 'cfg/connect.inc.php');
       preg_match("/define\(\'DB_NAME\', \'(.+)\'\);/", $config, $match);
-      $this->Dbname   = $match[1];
+      $this->dbname   = $match[1];
       preg_match("/define\(\'DB_USER\', \'(.+)\'\);/", $config, $match);
-      $this->Username = $match[1];
+      $this->username = $match[1];
       preg_match("/define\(\'DB_PASS\', \'(.*)\'\);/", $config, $match);
-      $this->Password = $match[1];
+      $this->password = $match[1];
       preg_match("/define\(\'DB_HOST\', \'(.+)\'\);/", $config, $match);
       $this->setHostPort( $match[1] );
 
@@ -1962,14 +2334,14 @@ class M1_Config_Adapter_SSPremium extends M1_Config_Adapter
       $this->manufacturersImagesDir = $this->imagesDir;
 
       $version = $this->getCartVersionFromDb("value", "SS_system", "varName = 'version_number'");
-      if ( $version != '' ) {
+      if ($version != '') {
         $this->cartVars['dbVersion'] = $version;
       }
     } else {
       $config = include M1_STORE_BASE_DIR . "wa-config/db.php";
-      $this->Dbname   = $config['default']['database'];
-      $this->Username = $config['default']['user'];
-      $this->Password = $config['default']['password'];
+      $this->dbname   = $config['default']['database'];
+      $this->username = $config['default']['user'];
+      $this->password = $config['default']['password'];
       $this->setHostPort($config['default']['host']);
 
       $this->imagesDir = "products_pictures/";
@@ -1983,9 +2355,16 @@ class M1_Config_Adapter_SSPremium extends M1_Config_Adapter
 
 }
 
+/**
+ * Class M1_Config_Adapter_Virtuemart113
+ */
 class M1_Config_Adapter_Virtuemart113 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Virtuemart113()
+
+  /**
+   * M1_Config_Adapter_Virtuemart113 constructor.
+   */
+  public function __construct()
   {
     require_once M1_STORE_BASE_DIR . "/configuration.php";
 
@@ -1994,19 +2373,19 @@ class M1_Config_Adapter_Virtuemart113 extends M1_Config_Adapter
       $jconfig = new JConfig();
 
       $this->setHostPort($jconfig->host);
-      $this->Dbname   = $jconfig->db;
-      $this->Username = $jconfig->user;
-      $this->Password = $jconfig->password;
+      $this->dbname   = $jconfig->db;
+      $this->username = $jconfig->user;
+      $this->password = $jconfig->password;
 
     } else {
 
       $this->setHostPort($mosConfig_host);
-      $this->Dbname   = $mosConfig_db;
-      $this->Username = $mosConfig_user;
-      $this->Password = $mosConfig_password;
+      $this->dbname   = $mosConfig_db;
+      $this->username = $mosConfig_user;
+      $this->password = $mosConfig_password;
     }
 
-    if ( file_exists(M1_STORE_BASE_DIR . "/administrator/components/com_virtuemart/version.php") ) {
+    if (file_exists(M1_STORE_BASE_DIR . "/administrator/components/com_virtuemart/version.php")) {
       $ver = file_get_contents(M1_STORE_BASE_DIR . "/administrator/components/com_virtuemart/version.php");
       if (preg_match('/\$RELEASE.+\'(.+)\'/', $ver, $match) != 0) {
         $this->cartVars['dbVersion'] = $match[1];
@@ -2019,23 +2398,30 @@ class M1_Config_Adapter_Virtuemart113 extends M1_Config_Adapter
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
 
-    if ( is_dir( M1_STORE_BASE_DIR . 'images/stories/virtuemart/product' ) ) {
+    if (is_dir( M1_STORE_BASE_DIR . 'images/stories/virtuemart/product')) {
       $this->imagesDir = 'images/stories/virtuemart';
       $this->productsImagesDir      = $this->imagesDir . '/product';
       $this->categoriesImagesDir    = $this->imagesDir . '/category';
       $this->manufacturersImagesDir  = $this->imagesDir . '/manufacturer';
     }
-
   }
+
 }
 
 
+/**
+ * Class M1_Config_Adapter_Hhgmultistore
+ */
 class M1_Config_Adapter_Hhgmultistore extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Hhgmultistore()
+
+  /**
+   * M1_Config_Adapter_Hhgmultistore constructor.
+   */
+  public function __construct()
   {
-    define('SITE_PATH','');
-    define('WEB_PATH','');
+    define('SITE_PATH', '');
+    define('WEB_PATH', '');
     require_once M1_STORE_BASE_DIR . "core/config/configure.php";
     require_once M1_STORE_BASE_DIR . "core/config/paths.php";
 
@@ -2051,12 +2437,12 @@ class M1_Config_Adapter_Hhgmultistore extends M1_Config_Adapter
     $this->manufacturersImagesDirs['img'] = $baseDir . DIR_WS_MANUFACTURERS_IMAGES;
     $this->manufacturersImagesDirs['org'] = $baseDir . DIR_WS_MANUFACTURERS_ORG_IMAGES;
 
-    $this->Host     = DB_SERVER;
-    $this->Username = DB_SERVER_USERNAME;
-    $this->Password = DB_SERVER_PASSWORD;
-    $this->Dbname   = DB_DATABASE;
+    $this->host     = DB_SERVER;
+    $this->username = DB_SERVER_USERNAME;
+    $this->password = DB_SERVER_PASSWORD;
+    $this->dbname   = DB_DATABASE;
 
-    if ( file_exists(M1_STORE_BASE_DIR . "/core/config/conf.hhg_startup.php") ) {
+    if (file_exists(M1_STORE_BASE_DIR . "/core/config/conf.hhg_startup.php")) {
       $ver = file_get_contents(M1_STORE_BASE_DIR . "/core/config/conf.hhg_startup.php");
       if (preg_match('/PROJECT_VERSION.+\((.+)\)\'\)/', $ver, $match) != 0) {
         $this->cartVars['dbVersion'] = $match[1];
@@ -2064,33 +2450,256 @@ class M1_Config_Adapter_Hhgmultistore extends M1_Config_Adapter
       }
     }
   }
+
 }
 
 
+/**
+ * Class M1_Config_Adapter_Wordpress
+ */
+class M1_Config_Adapter_Wordpress extends M1_Config_Adapter
+{
+
+  /**
+   * M1_Config_Adapter_Wordpress constructor.
+   */
+  public function __construct()
+  {
+    if (file_exists(M1_STORE_BASE_DIR . 'wp-config.php')) {
+      $config = file_get_contents(M1_STORE_BASE_DIR . 'wp-config.php');
+    } else {
+      $config = file_get_contents(dirname(M1_STORE_BASE_DIR) . '/wp-config.php');
+    }
+
+    preg_match('/define\s*\(\s*[\'"]DB_NAME[\'"],\s*[\'"](.+)[\'"]\s*\)\s*;/', $config, $dbnameMatch);
+    preg_match('/define\s*\(\s*[\'"]DB_USER[\'"],\s*[\'"](.+)[\'"]\s*\)\s*;/', $config, $usernameMatch);
+    preg_match('/define\s*\(\s*[\'"]DB_PASS(WORD)?[\'"],\s*[\'"](.*)[\'"]\s*\)\s*;/', $config, $passwordMatch);
+    preg_match('/define\s*\(\s*[\'"]DB_HOST[\'"],\s*[\'"](.+)[\'"]\s*\)\s*;/', $config, $hostMatch);
+    preg_match('/\$table_prefix\s*=\s*\'(.*)\'\s*;/', $config, $tblPrefixMatch);
+    if (preg_match('/define\s*\(\s*[\'"]UPLOADS[\'"],\s*[\'"](.+)[\'"]\s*\)\s*;/', $config, $match) && isset($match[1])) {
+      $this->imagesDir = preg_replace('/\'\.\'/', '', $match[1]);
+    } else {
+      $this->imagesDir = 'wp-content' . DIRECTORY_SEPARATOR . 'uploads';
+    }
+
+    if (isset($dbnameMatch[1]) && isset($usernameMatch[1])
+      && isset($passwordMatch[2]) && isset($hostMatch[1]) && isset($tblPrefixMatch[1])) {
+      $this->dbname   = $dbnameMatch[1];
+      $this->username = $usernameMatch[1];
+      $this->password = $passwordMatch[2];
+      $this->setHostPort($hostMatch[1]);
+      $this->tblPrefix = $tblPrefixMatch[1];
+    } elseif (!$this->_tryLoadConfigs()) {
+      die('ERROR_READING_STORE_CONFIG_FILE');
+    }
+
+    $cartPlugins = $this->getCartVersionFromDb("option_value", "options", "option_name = 'active_plugins'");
+    if ($cartPlugins) {
+      $cartPlugins = unserialize($cartPlugins);
+      foreach ($cartPlugins as $plugin) {
+        switch ($plugin) {
+          case 'woocommerce/woocommerce.php':
+            $this->_setWoocommerceData();
+            return;
+          case 'wp-e-commerce/wp-shopping-cart.php':
+            $this->_setWpecommerceData();
+            return;
+        }
+      }
+    }
+
+    die ("CART_PLUGIN_IS_NOT_DETECTED");
+  }
+
+  protected function _setWoocommerceData()
+  {
+    $version = $this->getCartVersionFromDb("option_value", "options", "option_name = 'woocommerce_db_version'");
+
+    if ($version != '') {
+      $this->cartVars['dbVersion'] = $version;
+    }
+
+    $this->cartVars['categoriesDirRelative'] = 'images/categories/';
+    $this->cartVars['productsDirRelative'] = 'images/products/';
+    $this->imagesDir = "wp-content/uploads/images/";
+    $this->categoriesImagesDir    = $this->imagesDir . 'categories/';
+    $this->productsImagesDir      = $this->imagesDir . 'products/';
+    $this->manufacturersImagesDir = $this->imagesDir;
+
+  }
+
+  protected function _setWpecommerceData()
+  {
+    $version = $this->getCartVersionFromDb("option_value", "options", "option_name = 'wpsc_version'");
+    if ($version != '') {
+      $this->cartVars['dbVersion'] = $version;
+    } else {
+      $filePath = M1_STORE_BASE_DIR . "wp-content" . DIRECTORY_SEPARATOR . "plugins" . DIRECTORY_SEPARATOR
+        . "wp-shopping-cart" . DIRECTORY_SEPARATOR . "wp-shopping-cart.php";
+      if (file_exists($filePath)) {
+        $conf = file_get_contents ($filePath);
+        preg_match("/define\('WPSC_VERSION.*/", $conf, $match);
+        if (isset($match[0]) && !empty($match[0])) {
+          preg_match("/\d.*/", $match[0], $project);
+          if (isset($project[0]) && !empty($project[0])) {
+            $version = $project[0];
+            $version = str_replace(array(" ","-","_","'",");",")",";"), "", $version);
+            if ($version != '') {
+              $this->cartVars['dbVersion'] = strtolower($version);
+            }
+          }
+        }
+      }
+    }
+
+    if (file_exists(M1_STORE_BASE_DIR . "wp-content/plugins/shopp/Shopp.php")
+      || file_exists(M1_STORE_BASE_DIR . "wp-content/plugins/wp-e-commerce/editor.php")) {
+      $this->imagesDir = "wp-content/uploads/wpsc/";
+      $this->categoriesImagesDir    = $this->imagesDir.'category_images/';
+      $this->productsImagesDir      = $this->imagesDir.'product_images/';
+      $this->manufacturersImagesDir = $this->imagesDir;
+    } elseif (file_exists(M1_STORE_BASE_DIR . "wp-content/plugins/wp-e-commerce/wp-shopping-cart.php")) {
+      $this->imagesDir = "wp-content/uploads/";
+      $this->categoriesImagesDir    = $this->imagesDir."wpsc/category_images/";
+      $this->productsImagesDir      = $this->imagesDir;
+      $this->manufacturersImagesDir = $this->imagesDir;
+    } else {
+      $this->imagesDir = "images/";
+      $this->categoriesImagesDir    = $this->imagesDir;
+      $this->productsImagesDir      = $this->imagesDir;
+      $this->manufacturersImagesDir = $this->imagesDir;
+    }
+  }
+
+  protected function _tryLoadConfigs()
+  {
+    try {
+      if (file_exists(M1_STORE_BASE_DIR . 'wp-config.php')) {
+        require_once(M1_STORE_BASE_DIR . 'wp-config.php');
+      } else {
+        require_once(dirname(M1_STORE_BASE_DIR) . '/wp-config.php');
+      }
+
+      if (defined('DB_NAME') && defined('DB_USER') && defined('DB_HOST')) {
+        $this->dbname   = DB_NAME;
+        $this->username = DB_USER;
+        $this->setHostPort(DB_HOST);
+      } else {
+        return false;
+      }
+
+      if (defined('DB_PASSWORD')) {
+        $this->password = DB_PASSWORD;
+      } elseif (defined('DB_PASS')) {
+        $this->password = DB_PASS;
+      } else {
+        return false;
+      }
+
+      if (defined('WP_CONTENT_DIR')) {
+        $this->imagesDir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads';
+      } elseif (defined('UPLOADS')) {
+        $this->imagesDir = UPLOADS;
+      } else {
+        $this->imagesDir = 'wp-content' . DIRECTORY_SEPARATOR . 'uploads';
+      }
+
+      if (isset($table_prefix)) {
+        $this->tblPrefix = $table_prefix;
+      }
+    } catch (Exception $e) {
+      return false;
+    }
+
+    return true;
+  }
+}
+
+
+
+/**
+ * Class M1_Config_Adapter_Magento1212
+ */
 class M1_Config_Adapter_Magento1212 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Magento1212()
+
+  /**
+   * M1_Config_Adapter_Magento1212 constructor.
+   */
+  public function __construct()
   {
+    // MAGENTO 2.X
+    if (file_exists(M1_STORE_BASE_DIR . 'app/etc/env.php')) {
+      /**
+       * @var array
+       */
+      $config = @include(M1_STORE_BASE_DIR . 'app/etc/env.php');
+
+      $this->cartVars['AdminUrl'] = (string)$config['backend']['frontName'];
+
+      $db = array();
+      foreach ($config['db']['connection'] as $connection) {
+        if ($connection['active'] == 1) {
+          $db = $connection;
+          break;
+        }
+      }
+
+      $this->setHostPort((string)$db['host']);
+      $this->username = (string)$db['username'];
+      $this->dbname   = (string)$db['dbname'];
+      $this->password = (string)$db['password'];
+
+      if (file_exists(M1_STORE_BASE_DIR . 'composer.json')) {
+        $string = file_get_contents(M1_STORE_BASE_DIR . 'composer.json');
+        $json = json_decode($string, true);
+        $this->cartVars['dbVersion'] = $json['version'];
+      } else {
+        if (file_exists(M1_STORE_BASE_DIR . 'vendor/magento/framework/AppInterface.php')) {
+          @include M1_STORE_BASE_DIR . 'vendor/magento/framework/AppInterface.php';
+
+          if (defined('\Magento\Framework\AppInterface::VERSION')) {
+            $this->cartVars['dbVersion'] = \Magento\Framework\AppInterface::VERSION;
+          } else {
+            $this->cartVars['dbVersion'] = '2.0';
+          }
+        } else {
+          $this->cartVars['dbVersion'] = '2.0';
+        }
+      }
+
+      if (isset($db['initStatements']) && $db['initStatements'] != '') {
+        $this->cartVars['dbCharSet'] = $db['initStatements'];
+      }
+
+      $this->imagesDir              = 'pub/media/';
+      $this->categoriesImagesDir    = $this->imagesDir . 'catalog/category/';
+      $this->productsImagesDir      = $this->imagesDir . 'catalog/product/';
+      $this->manufacturersImagesDir = $this->imagesDir;
+
+      return;
+    }
+
     /**
      * @var SimpleXMLElement
      */
     $config = simplexml_load_file(M1_STORE_BASE_DIR . 'app/etc/local.xml');
     $statuses = simplexml_load_file(M1_STORE_BASE_DIR . 'app/code/core/Mage/Sales/etc/config.xml');
 
-    $version =  $statuses->modules->Mage_Sales->version;
+    $version = $statuses->modules->Mage_Sales->version;
 
     $result = array();
 
-    if( version_compare($version, '1.4.0.25') < 0 ) {
+    if (version_compare($version, '1.4.0.25') < 0) {
       $statuses = $statuses->global->sales->order->statuses;
       foreach ( $statuses->children() as $status ) {
-        $result[$status->getName()] = (string) $status->label;
+        $result[$status->getName()] = (string)$status->label;
       }
     }
 
-    if ( file_exists(M1_STORE_BASE_DIR . "app/Mage.php") ) {
+    if (file_exists(M1_STORE_BASE_DIR . "app/Mage.php")) {
       $ver = file_get_contents(M1_STORE_BASE_DIR . "app/Mage.php");
-      if ( preg_match("/getVersionInfo[^}]+\'major\' *=> *\'(\d+)\'[^}]+\'minor\' *=> *\'(\d+)\'[^}]+\'revision\' *=> *\'(\d+)\'[^}]+\'patch\' *=> *\'(\d+)\'[^}]+}/s", $ver, $match) == 1 ) {
+      if (preg_match("/getVersionInfo[^}]+\'major\' *=> *\'(\d+)\'[^}]+\'minor\' *=> *\'(\d+)\'[^}]+\'revision\' *=> *\'(\d+)\'[^}]+\'patch\' *=> *\'(\d+)\'[^}]+}/s", $ver, $match) == 1 ) {
         $mageVersion = $match[1] . '.' . $match[2] . '.' . $match[3] . '.' . $match[4];
         $this->cartVars['dbVersion'] = $mageVersion;
         unset($match);
@@ -2100,10 +2709,10 @@ class M1_Config_Adapter_Magento1212 extends M1_Config_Adapter
     $this->cartVars['orderStatus'] = $result;
     $this->cartVars['AdminUrl']    = (string)$config->admin->routers->adminhtml->args->frontName;
 
-    $this->setHostPort((string) $config->global->resources->default_setup->connection->host);
-    $this->Username = (string) $config->global->resources->default_setup->connection->username;
-    $this->Dbname   = (string) $config->global->resources->default_setup->connection->dbname;
-    $this->Password = (string) $config->global->resources->default_setup->connection->password;
+    $this->setHostPort((string)$config->global->resources->default_setup->connection->host);
+    $this->username = (string)$config->global->resources->default_setup->connection->username;
+    $this->dbname   = (string)$config->global->resources->default_setup->connection->dbname;
+    $this->password = (string)$config->global->resources->default_setup->connection->password;
 
     $this->imagesDir              = 'media/';
     $this->categoriesImagesDir    = $this->imagesDir . "catalog/category/";
@@ -2113,16 +2722,23 @@ class M1_Config_Adapter_Magento1212 extends M1_Config_Adapter
   }
 }
 
+/**
+ * Class M1_Config_Adapter_Interspire
+ */
 class M1_Config_Adapter_Interspire extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Interspire()
+
+  /**
+   * M1_Config_Adapter_Interspire constructor.
+   */
+  public function __construct()
   {
     require_once M1_STORE_BASE_DIR . "config/config.php";
 
     $this->setHostPort($GLOBALS['ISC_CFG']["dbServer"]);
-    $this->Username = $GLOBALS['ISC_CFG']["dbUser"];
-    $this->Password = $GLOBALS['ISC_CFG']["dbPass"];
-    $this->Dbname   = $GLOBALS['ISC_CFG']["dbDatabase"];
+    $this->username = $GLOBALS['ISC_CFG']["dbUser"];
+    $this->password = $GLOBALS['ISC_CFG']["dbPass"];
+    $this->dbname   = $GLOBALS['ISC_CFG']["dbDatabase"];
 
     $this->imagesDir = $GLOBALS['ISC_CFG']["ImageDirectory"];
     $this->categoriesImagesDir    = $this->imagesDir;
@@ -2132,15 +2748,22 @@ class M1_Config_Adapter_Interspire extends M1_Config_Adapter
     define('DEFAULT_LANGUAGE_ISO2',$GLOBALS['ISC_CFG']["Language"]);
 
     $version = $this->getCartVersionFromDb("database_version", $GLOBALS['ISC_CFG']["tablePrefix"] . "config", '1');
-    if ( $version != '' ) {
+    if ($version != '') {
       $this->cartVars['dbVersion'] = $version;
     }
   }
 }
 
+/**
+ * Class M1_Config_Adapter_Pinnacle361
+ */
 class M1_Config_Adapter_Pinnacle361 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Pinnacle361()
+
+  /**
+   * M1_Config_Adapter_Pinnacle361 constructor.
+   */
+  public function __construct()
   {
     include_once M1_STORE_BASE_DIR . 'content/engine/engine_config.php';
 
@@ -2151,24 +2774,35 @@ class M1_Config_Adapter_Pinnacle361 extends M1_Config_Adapter
 
     //$this->Host = DB_HOST;
     $this->setHostPort(DB_HOST);
-    $this->Dbname = DB_NAME;
-    $this->Username = DB_USER;
-    $this->Password = DB_PASSWORD;
+    $this->dbname = DB_NAME;
+    $this->username = DB_USER;
+    $this->password = DB_PASSWORD;
 
-    $version = $this->getCartVersionFromDb("value", (defined('DB_PREFIX') ? DB_PREFIX : '') . "settings", "name = 'AppVer'");
-    if ( $version != '' ) {
+    $version = $this->getCartVersionFromDb(
+      "value",
+      (defined('DB_PREFIX') ? DB_PREFIX : '') . "settings",
+      "name = 'AppVer'"
+    );
+    if ($version != '') {
       $this->cartVars['dbVersion'] = $version;
     }
   }
+
 }
 
 
-
+/**
+ * Class M1_Config_Adapter_Oscommerce22ms2
+ */
 class M1_Config_Adapter_Oscommerce22ms2 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Oscommerce22ms2()
+
+  /**
+   * M1_Config_Adapter_Oscommerce22ms2 constructor.
+   */
+  public function __construct()
   {
-    $cur_dir = getcwd();
+    $curDir = getcwd();
 
     chdir(M1_STORE_BASE_DIR);
 
@@ -2176,27 +2810,27 @@ class M1_Config_Adapter_Oscommerce22ms2 extends M1_Config_Adapter
                 . "includes" . DIRECTORY_SEPARATOR
                 . "configure.php";
 
-    chdir($cur_dir);
+    chdir($curDir);
 
     $this->imagesDir = DIR_WS_IMAGES;
-    
+
     $this->categoriesImagesDir    = $this->imagesDir;
     $this->productsImagesDir      = $this->imagesDir;
-    if ( defined('DIR_WS_PRODUCT_IMAGES') ) {
+    if (defined('DIR_WS_PRODUCT_IMAGES') ) {
       $this->productsImagesDir = DIR_WS_PRODUCT_IMAGES;
     }
-    if ( defined('DIR_WS_ORIGINAL_IMAGES') ) {
+    if (defined('DIR_WS_ORIGINAL_IMAGES')) {
       $this->productsImagesDir = DIR_WS_ORIGINAL_IMAGES;
     }
     $this->manufacturersImagesDir = $this->imagesDir;
 
     //$this->Host      = DB_SERVER;
     $this->setHostPort(DB_SERVER);
-    $this->Username  = DB_SERVER_USERNAME;
-    $this->Password  = DB_SERVER_PASSWORD;
-    $this->Dbname    = DB_DATABASE;
+    $this->username  = DB_SERVER_USERNAME;
+    $this->password  = DB_SERVER_PASSWORD;
+    $this->dbname    = DB_DATABASE;
     chdir(M1_STORE_BASE_DIR);
-    if ( file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'application_top.php') ) {
+    if (file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'application_top.php')) {
       $conf = file_get_contents (M1_STORE_BASE_DIR . "includes" . DIRECTORY_SEPARATOR . "application_top.php");
       preg_match("/define\('PROJECT_VERSION.*/", $conf, $match);
       if (isset($match[0]) && !empty($match[0])) {
@@ -2204,53 +2838,61 @@ class M1_Config_Adapter_Oscommerce22ms2 extends M1_Config_Adapter
         if (isset($project[0]) && !empty($project[0])) {
           $version = $project[0];
           $version = str_replace(array(" ","-","_","'",");"), "", $version);
-           if ($version != '') {
-             $this->cartVars['dbVersion'] = strtolower($version);
-           }
-         }
+          if ($version != '') {
+            $this->cartVars['dbVersion'] = strtolower($version);
+          }
+        }
       } else {
         //if another oscommerce based cart
-        if ( file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'version.php') ) {
+        if (file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'version.php')) {
           @require_once M1_STORE_BASE_DIR . "includes" . DIRECTORY_SEPARATOR . "version.php";
-            if (defined('PROJECT_VERSION') && PROJECT_VERSION != '' ) {
-              $version = PROJECT_VERSION;
-              preg_match("/\d.*/", $version, $vers);
-              if (isset($vers[0]) && !empty($vers[0])) {
-                $version = $vers[0];
-                $version = str_replace(array(" ","-","_"), "", $version);
-                if ($version != '') {
-                  $this->cartVars['dbVersion'] = strtolower($version);
-                }
-              }
-              //if zen_cart
-            } else {
-              if (defined('PROJECT_VERSION_MAJOR') && PROJECT_VERSION_MAJOR != '' ) {
-                $this->cartVars['dbVersion'] = PROJECT_VERSION_MAJOR;
-              }
-              if (defined('PROJECT_VERSION_MINOR') && PROJECT_VERSION_MINOR != '' ) {
-                $this->cartVars['dbVersion'] .= '.' . PROJECT_VERSION_MINOR;
+          if (defined('PROJECT_VERSION') && PROJECT_VERSION != '' ) {
+            $version = PROJECT_VERSION;
+            preg_match("/\d.*/", $version, $vers);
+            if (isset($vers[0]) && !empty($vers[0])) {
+              $version = $vers[0];
+              $version = str_replace(array(" ","-","_"), "", $version);
+              if ($version != '') {
+                $this->cartVars['dbVersion'] = strtolower($version);
               }
             }
+            //if zen_cart
+          } else {
+            if (defined('PROJECT_VERSION_MAJOR') && PROJECT_VERSION_MAJOR != '' ) {
+              $this->cartVars['dbVersion'] = PROJECT_VERSION_MAJOR;
+            }
+            if (defined('PROJECT_VERSION_MINOR') && PROJECT_VERSION_MINOR != '' ) {
+              $this->cartVars['dbVersion'] .= '.' . PROJECT_VERSION_MINOR;
+            }
+          }
         }
       }
     }
-    chdir($cur_dir);
+    chdir($curDir);
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_Tomatocart
+ */
 class M1_Config_Adapter_Tomatocart extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Tomatocart()
+
+  /**
+   * M1_Config_Adapter_Tomatocart constructor.
+   */
+  public function __construct()
   {
     $config = file_get_contents(M1_STORE_BASE_DIR . "includes/configure.php");
     preg_match("/define\(\'DB_DATABASE\', \'(.+)\'\);/", $config, $match);
-    $this->Dbname   = $match[1];
+    $this->dbname   = $match[1];
     preg_match("/define\(\'DB_SERVER_USERNAME\', \'(.+)\'\);/", $config, $match);
-    $this->Username = $match[1];
+    $this->username = $match[1];
     preg_match("/define\(\'DB_SERVER_PASSWORD\', \'(.*)\'\);/", $config, $match);
-    $this->Password = $match[1];
+    $this->password = $match[1];
     preg_match("/define\(\'DB_SERVER\', \'(.+)\'\);/", $config, $match);
     $this->setHostPort( $match[1] );
 
@@ -2260,7 +2902,7 @@ class M1_Config_Adapter_Tomatocart extends M1_Config_Adapter
     $this->categoriesImagesDir    = $this->imagesDir.'categories/';
     $this->productsImagesDir      = $this->imagesDir.'products/';
     $this->manufacturersImagesDir = $this->imagesDir . 'manufacturers/';
-    if ( file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'application_top.php') ) {
+    if (file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'application_top.php')) {
       $conf = file_get_contents (M1_STORE_BASE_DIR . "includes" . DIRECTORY_SEPARATOR . "application_top.php");
       preg_match("/define\('PROJECT_VERSION.*/", $conf, $match);
 
@@ -2275,7 +2917,7 @@ class M1_Config_Adapter_Tomatocart extends M1_Config_Adapter
         }
       } else {
         //if another version
-        if ( file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'version.php') ) {
+        if (file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'version.php')) {
           @require_once M1_STORE_BASE_DIR . "includes" . DIRECTORY_SEPARATOR . "version.php";
           if (defined('PROJECT_VERSION') && PROJECT_VERSION != '' ) {
             $version = PROJECT_VERSION;
@@ -2292,13 +2934,21 @@ class M1_Config_Adapter_Tomatocart extends M1_Config_Adapter
       }
     }
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_Sunshop4
+ */
 class M1_Config_Adapter_Sunshop4 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Sunshop4()
+
+  /**
+   * M1_Config_Adapter_Sunshop4 constructor.
+   */
+  public function __construct()
   {
     @require_once M1_STORE_BASE_DIR
                 . "include" . DIRECTORY_SEPARATOR
@@ -2310,106 +2960,143 @@ class M1_Config_Adapter_Sunshop4 extends M1_Config_Adapter
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
 
-    if ( defined('ADMIN_DIR') ) {
+    if (defined('ADMIN_DIR')) {
       $this->cartVars['AdminUrl'] = ADMIN_DIR;
     }
 
     $this->setHostPort($servername);
-    $this->Username  = $dbusername;
-    $this->Password  = $dbpassword;
-    $this->Dbname    = $dbname;
+    $this->username  = $dbusername;
+    $this->password  = $dbpassword;
+    $this->dbname    = $dbname;
 
     if (isset($dbprefix)) {
-      $this->TblPrefix = $dbprefix;
+      $this->tblPrefix = $dbprefix;
     }
 
     $version = $this->getCartVersionFromDb("value", "settings", "name = 'version'");
-    if ( $version != '' ) {
+    if ($version != '') {
       $this->cartVars['dbVersion'] = $version;
     }
-
   }
+
 }
 
 
 
+/**
+ * Class miSettings
+ */
 class miSettings {
-  var $arr;
 
-  function singleton() {
+  protected $_arr;
+
+  /**
+   * @return miSettings|null
+   */
+  public function singleton()
+  {
     static $instance = null;
-    if ( $instance == null ) {
+    if ($instance == null) {
       $instance = new miSettings();
     }
     return $instance;
   }
 
-  function setArray($arr)
+  /**
+   * @param $arr
+   */
+  public function setArray($arr)
   {
-    $this->arr[] = $arr;
+    $this->_arr[] = $arr;
   }
 
-  function getArray()
+  /**
+   * @return mixed
+   */
+  public function getArray()
   {
-    return $this->arr;
+    return $this->_arr;
   }
 
 }
 
+/**
+ * Class M1_Config_Adapter_Summercart3
+ */
 class M1_Config_Adapter_Summercart3 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Summercart3()
+
+  /**
+   * M1_Config_Adapter_Summercart3 constructor.
+   */
+  public function __construct()
   {
     @include_once M1_STORE_BASE_DIR . "include/miphpf/Config.php";
 
-    $instance = miSettings::singleton();
+    $miSettings = new miSettings();
+    $instance = $miSettings->singleton();
 
     $data = $instance->getArray();
 
     $this->setHostPort($data[0]['MI_DEFAULT_DB_HOST']);
-    $this->Dbname   = $data[0]['MI_DEFAULT_DB_NAME'];
-    $this->Username = $data[0]['MI_DEFAULT_DB_USER'];
-    $this->Password = $data[0]['MI_DEFAULT_DB_PASS'];
+    $this->dbname   = $data[0]['MI_DEFAULT_DB_NAME'];
+    $this->username = $data[0]['MI_DEFAULT_DB_USER'];
+    $this->password = $data[0]['MI_DEFAULT_DB_PASS'];
     $this->imagesDir = "/userfiles/";
 
     $this->categoriesImagesDir    = $this->imagesDir . "categoryimages";
     $this->productsImagesDir      = $this->imagesDir . "productimages";
     $this->manufacturersImagesDir = $this->imagesDir . "manufacturer";
 
-    if ( file_exists(M1_STORE_BASE_DIR . "/include/VERSION") ) {
+    if (file_exists(M1_STORE_BASE_DIR . "/include/VERSION")) {
       $indexFileContent = file_get_contents(M1_STORE_BASE_DIR . "/include/VERSION");
       $this->cartVars['dbVersion'] = trim($indexFileContent);
     }
-
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_Oscommerce3
+ */
 class M1_Config_Adapter_Oscommerce3 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Oscommerce3()
+
+  /**
+   * M1_Config_Adapter_Oscommerce3 constructor.
+   */
+  public function __construct()
   {
     $file = M1_STORE_BASE_DIR .'/osCommerce/OM/Config/settings.ini';
-    $settings=parse_ini_file($file);
-    $this->imagesDir = "/public/"; 
+    $settings = parse_ini_file($file);
+    $this->imagesDir = "/public/";
     $this->categoriesImagesDir    = $this->imagesDir."/categories";
     $this->productsImagesDir      = $this->imagesDir."/products";
     $this->manufacturersImagesDir = $this->imagesDir;
 
-    $this->Host      = $settings['db_server'];
+    $this->host      = $settings['db_server'];
     $this->setHostPort($settings['db_server_port']);
-    $this->Username  = $settings['db_server_username'];
-    $this->Password  = $settings['db_server_password'];
-    $this->Dbname    = $settings['db_database'];
+    $this->username  = $settings['db_server_username'];
+    $this->password  = $settings['db_server_password'];
+    $this->dbname    = $settings['db_database'];
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_Prestashop15
+ */
 class M1_Config_Adapter_Prestashop15 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Prestashop15()
+
+  /**
+   * M1_Config_Adapter_Prestashop15 constructor.
+   */
+  public function __construct()
   {
     $confFileOne = file_get_contents(M1_STORE_BASE_DIR . "/config/settings.inc.php");
     $confFileTwo = file_get_contents(M1_STORE_BASE_DIR . "/config/config.inc.php");
@@ -2417,7 +3104,7 @@ class M1_Config_Adapter_Prestashop15 extends M1_Config_Adapter
     $filesLines = array_merge(explode("\n", $confFileOne), explode("\n", $confFileTwo));
 
     $execute = '$currentDir = \'\';';
-
+    $constArray = array();
     $isComment = false;
     foreach ($filesLines as $line) {
       $startComment = preg_match("/^(\/\*)/", $line);
@@ -2437,8 +3124,15 @@ class M1_Config_Adapter_Prestashop15 extends M1_Config_Adapter
       }
 
       if (preg_match("/^(\s*)define\(/i", $line)) {
-        if ((strpos($line, '_DB_') !== false) || (strpos($line, '_PS_IMG_DIR_') !== false) || (strpos($line, '_PS_VERSION_') !== false)) {
-          $execute .= " " . $line;
+        if ((strpos($line, '_DB_') !== false) || (strpos($line, '_PS_IMG_DIR_') !== false)
+          || (strpos($line, '_PS_VERSION_') !== false)
+        ) {
+          $const = substr($line, strrpos($line, "'_"));
+          $const = substr($const, 0, strrpos($const, ", "));
+          if (!in_array($const, $constArray)) {
+            $execute .= " " . $line;
+            $constArray[] = $const;
+          }
         }
       }
     }
@@ -2447,13 +3141,13 @@ class M1_Config_Adapter_Prestashop15 extends M1_Config_Adapter
     eval($execute);
 
     $this->setHostPort(_DB_SERVER_);
-    $this->Dbname   = _DB_NAME_;
-    $this->Username = _DB_USER_;
-    $this->Password = _DB_PASSWD_;
+    $this->dbname   = _DB_NAME_;
+    $this->username = _DB_USER_;
+    $this->password = _DB_PASSWD_;
 
     if (defined('_PS_IMG_DIR_') && defined('_PS_ROOT_DIR_')) {
 
-      preg_match("/(\/\w+\/)$/i", _PS_IMG_DIR_ ,$m);
+      preg_match("/(\/\w+\/)$/i", _PS_IMG_DIR_, $m);
       $this->imagesDir = $m[1];
 
     } else {
@@ -2468,22 +3162,29 @@ class M1_Config_Adapter_Prestashop15 extends M1_Config_Adapter
       $this->cartVars['dbVersion'] = _PS_VERSION_;
     }
   }
+
 }
 
 
 
-
+/**
+ * Class M1_Config_Adapter_Gambio
+ */
 class M1_Config_Adapter_Gambio extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Gambio()
+
+  /**
+   * M1_Config_Adapter_Gambio constructor.
+   */
+  public function __construct()
   {
-    $cur_dir = getcwd();
+    $curDir = getcwd();
 
     chdir(M1_STORE_BASE_DIR);
 
     @require_once M1_STORE_BASE_DIR . "includes/configure.php";
 
-    chdir($cur_dir);
+    chdir($curDir);
 
     $this->imagesDir = DIR_WS_IMAGES;
 
@@ -2497,11 +3198,11 @@ class M1_Config_Adapter_Gambio extends M1_Config_Adapter
     }
     $this->manufacturersImagesDir = $this->imagesDir;
 
-    $this->Host      = DB_SERVER;
+    $this->host      = DB_SERVER;
     //$this->setHostPort(DB_SERVER);
-    $this->Username  = DB_SERVER_USERNAME;
-    $this->Password  = DB_SERVER_PASSWORD;
-    $this->Dbname    = DB_DATABASE;
+    $this->username  = DB_SERVER_USERNAME;
+    $this->password  = DB_SERVER_PASSWORD;
+    $this->dbname    = DB_DATABASE;
 
     chdir(M1_STORE_BASE_DIR);
     if (file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'application_top.php')) {
@@ -2518,7 +3219,7 @@ class M1_Config_Adapter_Gambio extends M1_Config_Adapter
         }
       } else {
         //if another oscommerce based cart
-        if ( file_exists(M1_STORE_BASE_DIR . DIRECTORY_SEPARATOR . 'version_info.php') ) {
+        if (file_exists(M1_STORE_BASE_DIR . DIRECTORY_SEPARATOR . 'version_info.php')) {
           @require_once M1_STORE_BASE_DIR . DIRECTORY_SEPARATOR . "version_info.php";
           if (defined('PROJECT_VERSION') && PROJECT_VERSION != '' ) {
             $version = PROJECT_VERSION;
@@ -2542,27 +3243,42 @@ class M1_Config_Adapter_Gambio extends M1_Config_Adapter
         }
       }
     }
-    chdir($cur_dir);
+    chdir($curDir);
   }
+
 }
 
 
 
+/**
+ * Class M1_Config_Adapter_Shopware
+ */
 class M1_Config_Adapter_Shopware extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Shopware()
+
+  /**
+   * M1_Config_Adapter_Shopware constructor.
+   */
+  public function __construct()
   {
     $configs = include(M1_STORE_BASE_DIR . "config.php");
     $this->setHostPort($configs['db']['host']);
-    $this->Username =  $configs['db']['username'];
-    $this->Password =  $configs['db']['password'];
-    $this->Dbname   =  $configs['db']['dbname'];
+    $this->username = $configs['db']['username'];
+    $this->password = $configs['db']['password'];
+    $this->dbname   = $configs['db']['dbname'];
   }
 }
 
+/**
+ * Class M1_Config_Adapter_AceShop
+ */
 class M1_Config_Adapter_AceShop extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_AceShop()
+
+  /**
+   * M1_Config_Adapter_AceShop constructor.
+   */
+  public function __construct()
   {
     require_once M1_STORE_BASE_DIR . "/configuration.php";
 
@@ -2571,30 +3287,37 @@ class M1_Config_Adapter_AceShop extends M1_Config_Adapter
       $jconfig = new JConfig();
 
       $this->setHostPort($jconfig->host);
-      $this->Dbname   = $jconfig->db;
-      $this->Username = $jconfig->user;
-      $this->Password = $jconfig->password;
+      $this->dbname   = $jconfig->db;
+      $this->username = $jconfig->user;
+      $this->password = $jconfig->password;
 
     } else {
 
       $this->setHostPort($mosConfig_host);
-      $this->Dbname   = $mosConfig_db;
-      $this->Username = $mosConfig_user;
-      $this->Password = $mosConfig_password;
+      $this->dbname   = $mosConfig_db;
+      $this->username = $mosConfig_user;
+      $this->password = $mosConfig_password;
     }
-
 
     $this->imagesDir = "components/com_aceshop/opencart/image/";
     $this->categoriesImagesDir    = $this->imagesDir;
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
   }
+
 }
 
 
+/**
+ * Class M1_Config_Adapter_Cscart203
+ */
 class M1_Config_Adapter_Cscart203 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Cscart203()
+
+  /**
+   * M1_Config_Adapter_Cscart203 constructor.
+   */
+  public function __construct()
   {
     define("IN_CSCART", 1);
     define("CSCART_DIR", M1_STORE_BASE_DIR);
@@ -2607,18 +3330,18 @@ class M1_Config_Adapter_Cscart203 extends M1_Config_Adapter
     defined('DIR_IMAGES') or define('DIR_IMAGES', DIR_ROOT . '/images/');
 
     //For CS CART 1.3.x
-    if( isset( $db_host ) && isset($db_name) && isset($db_user) && isset($db_password) ) {
+    if (isset($db_host) && isset($db_name) && isset($db_user) && isset($db_password)) {
       $this->setHostPort($db_host);
-      $this->Dbname = $db_name;
-      $this->Username = $db_user;
-      $this->Password = $db_password;
+      $this->dbname = $db_name;
+      $this->username = $db_user;
+      $this->password = $db_password;
       $this->imagesDir = str_replace(M1_STORE_BASE_DIR, '', IMAGES_STORAGE_DIR );
     } else {
 
       $this->setHostPort($config['db_host']);
-      $this->Dbname = $config['db_name'];
-      $this->Username = $config['db_user'];
-      $this->Password = $config['db_password'];
+      $this->dbname = $config['db_name'];
+      $this->username = $config['db_user'];
+      $this->password = $config['db_password'];
       $this->imagesDir = str_replace(M1_STORE_BASE_DIR, '', DIR_IMAGES);
     }
 
@@ -2626,85 +3349,35 @@ class M1_Config_Adapter_Cscart203 extends M1_Config_Adapter
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
 
-    if( defined('MAX_FILES_IN_DIR') ) {
+    if (defined('MAX_FILES_IN_DIR')) {
       $this->cartVars['cs_max_files_in_dir'] = MAX_FILES_IN_DIR;
     }
 
-    if( defined('PRODUCT_VERSION') ) {
+    if (defined('PRODUCT_VERSION')) {
       $this->cartVars['dbVersion'] = PRODUCT_VERSION;
     }
   }
+
 }
 
 
-class M1_Config_Adapter_WPecommerce extends M1_Config_Adapter
-{
-  function M1_Config_Adapter_WPecommerce()
-  {
-    //@include_once M1_STORE_BASE_DIR . "wp-config.php";
-    $config = file_get_contents(M1_STORE_BASE_DIR . "wp-config.php");
-    preg_match("/define\(\'DB_NAME\', \'(.+)\'\);/", $config, $match);
-    $this->Dbname   = $match[1];
-    preg_match("/define\(\'DB_USER\', \'(.+)\'\);/", $config, $match);
-    $this->Username = $match[1];
-    preg_match("/define\(\'DB_PASSWORD\', \'(.*)\'\);/", $config, $match);
-    $this->Password = $match[1];
-    preg_match("/define\(\'DB_HOST\', \'(.+)\'\);/", $config, $match);
-    $this->setHostPort( $match[1] );
-    preg_match("/(table_prefix)(.*)(')(.*)(')(.*)/", $config, $match);
-    $this->TblPrefix = $match[4];
-    $version = $this->getCartVersionFromDb("option_value", "options", "option_name = 'wpsc_version'");
-    if ( $version != '' ) {
-      $this->cartVars['dbVersion'] = $version;
-    } else {
-       if ( file_exists(M1_STORE_BASE_DIR . "wp-content".DIRECTORY_SEPARATOR."plugins".DIRECTORY_SEPARATOR."wp-shopping-cart".DIRECTORY_SEPARATOR."wp-shopping-cart.php")  ) {
-         $conf = file_get_contents (M1_STORE_BASE_DIR . "wp-content".DIRECTORY_SEPARATOR."plugins".DIRECTORY_SEPARATOR."wp-shopping-cart".DIRECTORY_SEPARATOR."wp-shopping-cart.php");
-         preg_match("/define\('WPSC_VERSION.*/", $conf, $match);
-         if (isset($match[0]) && !empty($match[0])) {
-           preg_match("/\d.*/", $match[0], $project);
-           if (isset($project[0]) && !empty($project[0])) {
-             $version = $project[0];
-             $version = str_replace(array(" ","-","_","'",");",")",";"), "", $version);
-             if ($version != '') {
-               $this->cartVars['dbVersion'] = strtolower($version);
-             }
-           }
-         }
-       }
-    }
-    if ( file_exists(M1_STORE_BASE_DIR . "wp-content/plugins/shopp/Shopp.php") || file_exists(M1_STORE_BASE_DIR . "wp-content/plugins/wp-e-commerce/editor.php") ) {
-      $this->imagesDir = "wp-content/uploads/wpsc/";
-      $this->categoriesImagesDir    = $this->imagesDir.'category_images/';
-      $this->productsImagesDir      = $this->imagesDir.'product_images/';
-      $this->manufacturersImagesDir = $this->imagesDir;
-    } elseif ( file_exists(M1_STORE_BASE_DIR . "wp-content/plugins/wp-e-commerce/wp-shopping-cart.php") ) {
-      $this->imagesDir = "wp-content/uploads/";
-      $this->categoriesImagesDir    = $this->imagesDir."wpsc/category_images/";
-      $this->productsImagesDir      = $this->imagesDir;
-      $this->manufacturersImagesDir = $this->imagesDir;
-    } else {
-      $this->imagesDir = "images/";
-      $this->categoriesImagesDir    = $this->imagesDir;
-      $this->productsImagesDir      = $this->imagesDir;
-      $this->manufacturersImagesDir = $this->imagesDir;
-    }
-  }
-}
-
-
-
+/**
+ * Class M1_Config_Adapter_LemonStand
+ */
 class M1_Config_Adapter_LemonStand extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_LemonStand()
+
+  /**
+   * M1_Config_Adapter_LemonStand constructor.
+   */
+  public function __construct()
   {
     include (M1_STORE_BASE_DIR . 'phproad/system/phpr.php');
     include (M1_STORE_BASE_DIR . 'phproad/modules/phpr/classes/phpr_securityframework.php');
 
     define('PATH_APP','');
 
-
-    if(phpversion() > 5)
-    {
+    if (phpversion() > 5) {
       eval ('Phpr::$config = new MockConfig();	  	  
       Phpr::$config->set("SECURE_CONFIG_PATH", M1_STORE_BASE_DIR . "config/config.dat");
       $framework = Phpr_SecurityFramework::create();');
@@ -2713,9 +3386,9 @@ class M1_Config_Adapter_LemonStand extends M1_Config_Adapter
     $config_content = $framework->get_config_content();
 
     $this->setHostPort($config_content['mysql_params']['host']);
-    $this->Dbname   = $config_content['mysql_params']['database'];
-    $this->Username = $config_content['mysql_params']['user'];
-    $this->Password = $config_content['mysql_params']['password'];
+    $this->dbname   = $config_content['mysql_params']['database'];
+    $this->username = $config_content['mysql_params']['user'];
+    $this->password = $config_content['mysql_params']['password'];
 
     $this->categoriesImagesDir    = '/uploaded/thumbnails/';
     $this->productsImagesDir      = '/uploaded/';
@@ -2725,25 +3398,46 @@ class M1_Config_Adapter_LemonStand extends M1_Config_Adapter
     $this->cartVars['dbVersion'] = $version;
 
   }
+
 }
 
+/**
+ * Class MockConfig
+ */
 class MockConfig {
-  var $_data = array();
-  function set($key, $value)
+
+  protected $_data = array();
+
+  /**
+   * @param $key
+   * @param $value
+   */
+  public function set($key, $value)
   {
     $this->_data[$key] = $value;
   }
-  
-  function get($key, $default = 'default')
+
+  /**
+   * @param $key
+   * @param string $default
+   * @return mixed|string
+   */
+  public function get($key, $default = 'default')
   {
     return isset($this->_data[$key]) ? $this->_data[$key] : $default;
   }
 }
 
+/**
+ * Class M1_Config_Adapter_DrupalCommerce
+ */
 class M1_Config_Adapter_DrupalCommerce extends M1_Config_Adapter
 {
 
-  function M1_Config_Adapter_DrupalCommerce()
+  /**
+   * M1_Config_Adapter_DrupalCommerce constructor.
+   */
+  public function __construct()
   {
     @include_once M1_STORE_BASE_DIR . "sites/default/settings.php";
 
@@ -2758,20 +3452,19 @@ class M1_Config_Adapter_DrupalCommerce extends M1_Config_Adapter
     }
 
     $this->setHostPort( $url['host'] );
-    $this->Dbname   = ltrim( $url['database'], '/' );
-    $this->Username = $url['username'];
-    $this->Password = $url['password'];
+    $this->dbname   = ltrim( $url['database'], '/' );
+    $this->username = $url['username'];
+    $this->password = $url['password'];
 
     $this->imagesDir = "/sites/default/files/";
-    if( !file_exists( M1_STORE_BASE_DIR . $this->imagesDir ) ) {
+    if (!file_exists(M1_STORE_BASE_DIR . $this->imagesDir)) {
       $this->imagesDir = "/files";
     }
 
-
     $fileInfo = M1_STORE_BASE_DIR . "/sites/all/modules/commerce/commerce.info";
-    if ( file_exists( $fileInfo ) ) {
-      $str = file_get_contents( $fileInfo );
-      if ( preg_match('/version\s+=\s+".+-(.+)"/', $str, $match) != 0 ) {
+    if (file_exists($fileInfo)) {
+      $str = file_get_contents($fileInfo);
+      if (preg_match('/version\s+=\s+".+-(.+)"/', $str, $match) != 0) {
         $this->cartVars['dbVersion'] = $match[1];
         unset($match);
       }
@@ -2780,22 +3473,27 @@ class M1_Config_Adapter_DrupalCommerce extends M1_Config_Adapter
     $this->categoriesImagesDir    = $this->imagesDir;
     $this->productsImagesDir      = $this->imagesDir;
     $this->manufacturersImagesDir = $this->imagesDir;
-
-
   }
 }
 
+/**
+ * Class M1_Config_Adapter_SSFree
+ */
 class M1_Config_Adapter_SSFree extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_SSFree()
+
+  /**
+   * M1_Config_Adapter_SSFree constructor.
+   */
+  public function __construct()
   {
     $config = file_get_contents(M1_STORE_BASE_DIR . 'cfg/connect.inc.php');
     preg_match("/define\(\'DB_NAME\', \'(.+)\'\);/", $config, $match);
-    $this->Dbname   = $match[1];
+    $this->dbname   = $match[1];
     preg_match("/define\(\'DB_USER\', \'(.+)\'\);/", $config, $match);
-    $this->Username = $match[1];
+    $this->username = $match[1];
     preg_match("/define\(\'DB_PASS\', \'(.*)\'\);/", $config, $match);
-    $this->Password = $match[1];
+    $this->password = $match[1];
     preg_match("/define\(\'DB_HOST\', \'(.+)\'\);/", $config, $match);
     $this->setHostPort( $match[1] );
 
@@ -2824,11 +3522,18 @@ class M1_Config_Adapter_SSFree extends M1_Config_Adapter
 
 }
 
+/**
+ * Class M1_Config_Adapter_Zencart137
+ */
 class M1_Config_Adapter_Zencart137 extends M1_Config_Adapter
 {
-  function M1_Config_Adapter_Zencart137()
+
+  /**
+   * M1_Config_Adapter_Zencart137 constructor.
+   */
+  public function __construct()
   {
-    $cur_dir = getcwd();
+    $curDir = getcwd();
 
     chdir(M1_STORE_BASE_DIR);
 
@@ -2836,26 +3541,26 @@ class M1_Config_Adapter_Zencart137 extends M1_Config_Adapter
                 . "includes" . DIRECTORY_SEPARATOR
                 . "configure.php";
 
-    chdir($cur_dir);
+    chdir($curDir);
 
     $this->imagesDir = DIR_WS_IMAGES;
-    
+
     $this->categoriesImagesDir    = $this->imagesDir;
     $this->productsImagesDir      = $this->imagesDir;
-    if ( defined('DIR_WS_PRODUCT_IMAGES') ) {
+    if (defined('DIR_WS_PRODUCT_IMAGES')) {
       $this->productsImagesDir = DIR_WS_PRODUCT_IMAGES;
     }
-    if ( defined('DIR_WS_ORIGINAL_IMAGES') ) {
+    if (defined('DIR_WS_ORIGINAL_IMAGES')) {
       $this->productsImagesDir = DIR_WS_ORIGINAL_IMAGES;
     }
     $this->manufacturersImagesDir = $this->imagesDir;
 
     //$this->Host      = DB_SERVER;
     $this->setHostPort(DB_SERVER);
-    $this->Username  = DB_SERVER_USERNAME;
-    $this->Password  = DB_SERVER_PASSWORD;
-    $this->Dbname    = DB_DATABASE;
-    if ( file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'version.php') ) {
+    $this->username  = DB_SERVER_USERNAME;
+    $this->password  = DB_SERVER_PASSWORD;
+    $this->dbname    = DB_DATABASE;
+    if (file_exists(M1_STORE_BASE_DIR  . "includes" . DIRECTORY_SEPARATOR . 'version.php')) {
        @require_once M1_STORE_BASE_DIR
               . "includes" . DIRECTORY_SEPARATOR
               . "version.php";
@@ -2868,44 +3573,50 @@ class M1_Config_Adapter_Zencart137 extends M1_Config_Adapter
         $minor = EXPECTED_DATABASE_VERSION_MINOR;
       }
 
-      if ( $major != '' && $minor != '' ) {
+      if ($major != '' && $minor != '') {
         $this->cartVars['dbVersion'] = $major.'.'.$minor;
       }
 
     }
   }
+
 }
 
 
 
+/**
+ * @package  Api2cart
+ * @author   Babyak Roman <r.babyak@magneticone.com>
+ * @license  Not public license
+ * @link     https://www.api2cart.com
+ */
 
 class M1_Config_Adapter
 {
-  var $Host                = 'localhost';
-  var $Port                = null;//"3306";
-  var $Username            = 'root';
-  var $Password            = '';
-  var $Dbname              = '';
-  var $TblPrefix           = '';
+  public $host                = 'localhost';
+  public $port                = null;//"3306";
+  public $username            = 'root';
+  public $password            = '';
+  public $dbname              = '';
+  public $tblPrefix           = '';
 
-  var $cartType                 = 'Oscommerce22ms2';
-  var $imagesDir                = '';
-  var $categoriesImagesDir      = '';
-  var $productsImagesDir        = '';
-  var $manufacturersImagesDir   = '';
-  var $categoriesImagesDirs     = '';
-  var $productsImagesDirs       = '';
-  var $manufacturersImagesDirs  = '';
+  public $cartType                 = 'Oscommerce22ms2';
+  public $imagesDir                = '';
+  public $categoriesImagesDir      = '';
+  public $productsImagesDir        = '';
+  public $manufacturersImagesDir   = '';
+  public $categoriesImagesDirs     = '';
+  public $productsImagesDirs       = '';
+  public $manufacturersImagesDirs  = '';
 
-  var $languages   = array();
-  var $cartVars    = array();
+  public $languages   = array();
+  public $cartVars    = array();
 
-  function create()
+  /**
+   * @return mixed
+   */
+  public function create()
   {
-    if (isset($_GET["action"]) && $_GET["action"] == "update") {
-      return null;
-    }
-
     $cartType = $this->_detectCartType();
     $className = "M1_Config_Adapter_" . $cartType;
 
@@ -2915,7 +3626,10 @@ class M1_Config_Adapter
     return $obj;
   }
 
-  function _detectCartType()
+  /**
+   * @return string
+   */
+  private function _detectCartType()
   {
     // Zencart137
     if (file_exists(M1_STORE_BASE_DIR . "includes" . DIRECTORY_SEPARATOR . "configure.php")
@@ -2976,7 +3690,9 @@ class M1_Config_Adapter
     }
 
     // Magento1212, we can be sure that PHP is >= 5.2.0
-    if (file_exists(M1_STORE_BASE_DIR . 'app/etc/local.xml')) {
+    if (file_exists(M1_STORE_BASE_DIR . 'app/etc/local.xml')
+      || @file_exists(M1_STORE_BASE_DIR . 'app/etc/env.php')
+    ) {
       return "Magento1212";
     }
 
@@ -3002,11 +3718,6 @@ class M1_Config_Adapter
     //Shopware
     if (file_exists(M1_STORE_BASE_DIR . "config.php") && file_exists(M1_STORE_BASE_DIR . "shopware.php")) {
       return "Shopware";
-    }
-
-    //XCart
-    if (file_exists(M1_STORE_BASE_DIR . "config.php")) {
-      return "XCart";
     }
 
     //LemonStand
@@ -3054,6 +3765,12 @@ class M1_Config_Adapter
       return "XtcommerceVeyton";
     }
 
+    //Woocommerce, WPecommerce
+    if (file_exists(M1_STORE_BASE_DIR . 'wp-config.php') || file_exists(dirname(M1_STORE_BASE_DIR) . '/wp-config.php')
+    ) {
+      return 'Wordpress';
+    }
+
     //Ubercart
     if (file_exists(M1_STORE_BASE_DIR . 'sites/default/settings.php' )) {
       if (file_exists( M1_STORE_BASE_DIR . '/modules/ubercart/uc_store/includes/coder_review_uc3x.inc')) {
@@ -3065,22 +3782,9 @@ class M1_Config_Adapter
       return "Ubercart";
     }
 
-    //Woocommerce
-    if (file_exists(M1_STORE_BASE_DIR . 'wp-config.php')
-      && file_exists(M1_STORE_BASE_DIR . 'wp-content/plugins/woocommerce/woocommerce.php')
-    ) {
-      return 'Woocommerce';
-    }
-
-    if (file_exists(dirname(M1_STORE_BASE_DIR) . '/wp-config.php')
-      && file_exists(M1_STORE_BASE_DIR . 'wp-content/plugins/woocommerce/woocommerce.php')
-    ) {
-      return 'Woocommerce';
-    }
-
-    //WPecommerce
-    if (file_exists(M1_STORE_BASE_DIR . 'wp-config.php')) {
-      return 'WPecommerce';
+    //XCart
+    if (file_exists(M1_STORE_BASE_DIR . "config.php")) {
+      return "XCart";
     }
 
     //OXID e-shop
@@ -3110,7 +3814,11 @@ class M1_Config_Adapter
     die ("BRIDGE_ERROR_CONFIGURATION_NOT_FOUND");
   }
 
-  function getAdapterPath($cartType)
+  /**
+   * @param $cartType
+   * @return string
+   */
+  public function getAdapterPath($cartType)
   {
     return M1_STORE_BASE_DIR . M1_BRIDGE_DIRECTORY_NAME . DIRECTORY_SEPARATOR
       . "app" . DIRECTORY_SEPARATOR
@@ -3118,29 +3826,35 @@ class M1_Config_Adapter
       . "config_adapter" . DIRECTORY_SEPARATOR . $cartType . ".php";
   }
 
-  function setHostPort($source)
+  /**
+   * @param $source
+   */
+  public function setHostPort($source)
   {
     $source = trim($source);
 
     if ($source == '') {
-      $this->Host = 'localhost';
+      $this->host = 'localhost';
       return;
     }
 
     $conf = explode(":", $source);
 
     if (isset($conf[0]) && isset($conf[1])) {
-      $this->Host = $conf[0];
-      $this->Port = $conf[1];
+      $this->host = $conf[0];
+      $this->port = $conf[1];
     } elseif ($source[0] == '/') {
-      $this->Host = 'localhost';
-      $this->Port = $source;
+      $this->host = 'localhost';
+      $this->port = $source;
     } else {
-      $this->Host = $source;
+      $this->host = $source;
     }
   }
 
-  function connect()
+  /**
+   * @return bool|M1_Mysql|M1_Mysqli|M1_Pdo
+   */
+  public function connect()
   {
     if (function_exists('mysql_connect')) {
       $link = new M1_Mysql($this);
@@ -3155,7 +3869,13 @@ class M1_Config_Adapter
     return $link;
   }
 
-  function getCartVersionFromDb($field, $tableName, $where)
+  /**
+   * @param $field
+   * @param $tableName
+   * @param $where
+   * @return string
+   */
+  public function getCartVersionFromDb($field, $tableName, $where)
   {
     $version = '';
 
@@ -3166,7 +3886,7 @@ class M1_Config_Adapter
 
     $result = $link->localQuery("
       SELECT " . $field . " AS version
-      FROM " . $this->TblPrefix . $tableName . "
+      FROM " . $this->tblPrefix . $tableName . "
       WHERE " . $where
     );
 
@@ -3178,43 +3898,63 @@ class M1_Config_Adapter
   }
 }
 
+/**
+ * @package  Api2cart
+ * @author   Babyak Roman <r.babyak@magneticone.com>
+ * @license  Not public license
+ * @link     https://www.api2cart.com
+ */
 
 class M1_Bridge
 {
-  var $_link      = null; //mysql connection link
-  var $config     = null; //config adapter
+  protected $_link  = null; //mysql connection link
+  public $config    = null; //config adapter
 
   /**
    * Bridge constructor
    *
-   * @param M1_Config_Adapter $config
-   * @return M1_Bridge
+   * M1_Bridge constructor.
+   * @param $config
    */
-  function M1_Bridge($config)
+  public function __construct(M1_Config_Adapter $config)
   {
     $this->config = $config;
 
-    if ($this->getAction() != "savefile" && $this->getAction() != "update") {
+    if ($this->getAction() != "savefile") {
       $this->_link = $this->config->connect();
     }
   }
 
-  function getTablesPrefix()
+  /**
+   * @return mixed
+   */
+  public function getTablesPrefix()
   {
-    return $this->config->TblPrefix;
+    return $this->config->tblPrefix;
   }
 
-  function getLink()
+  /**
+   * @return null
+   */
+  public function getLink()
   {
     return $this->_link;
   }
 
-  function query($sql, $fetchMode)
+  /**
+   * @param $sql
+   * @param $fetchMode
+   * @return mixed
+   */
+  public function query($sql, $fetchMode)
   {
     return $this->_link->query($sql, $fetchMode);
   }
 
-  function getAction()
+  /**
+   * @return mixed|string
+   */
+  private function getAction()
   {
     if (isset($_GET['action'])) {
       return str_replace('.', '', $_GET['action']);
@@ -3223,17 +3963,17 @@ class M1_Bridge
     return '';
   }
 
-  function run()
+  public function run()
   {
     $action = $this->getAction();
-
-    if ($action != "update") {
-      $this->_selfTest();
-    }
 
     if ($action == "checkbridge") {
       echo "BRIDGE_OK";
       return;
+    }
+
+    if ($action != "update") {
+      $this->_selfTest();
     }
 
     if ($action == "update") {
@@ -3252,7 +3992,11 @@ class M1_Bridge
     $this->_destroy();
   }
 
-  function isWritable($dir)
+  /**
+   * @param $dir
+   * @return bool
+   */
+  private function isWritable($dir)
   {
     if (!@is_dir($dir)) {
       return false;
@@ -3281,15 +4025,21 @@ class M1_Bridge
     return true;
   }
 
-  function _destroy()
+  private function _destroy()
   {
     $this->_link = null;
   }
 
-  function _checkPossibilityUpdate()
+  private function _checkPossibilityUpdate()
   {
     if (!is_writable(M1_STORE_BASE_DIR . "/" . M1_BRIDGE_DIRECTORY_NAME . "/")) {
       die("ERROR_TRIED_TO_PERMISSION" . M1_STORE_BASE_DIR . "/" . M1_BRIDGE_DIRECTORY_NAME . "/");
+    }
+
+    if (isset($_GET['hash']) && $_GET['hash'] === M1_TOKEN) {
+      // good :)
+    } else {
+      die('ERROR_INVALID_TOKEN');
     }
 
     if (!is_writable(M1_STORE_BASE_DIR . "/". M1_BRIDGE_DIRECTORY_NAME . "/bridge.php")) {
@@ -3297,19 +4047,9 @@ class M1_Bridge
     }
   }
 
-  function _selfTest()
+  private function _selfTest()
   {
-    if (!isset($_GET['ver']) || $_GET['ver'] != M1_BRIDGE_VERSION) {
-      die ('ERROR_BRIDGE_VERSION_NOT_SUPPORTED');
-    }
-
-    if (isset($_GET['token']) && $_GET['token'] == M1_TOKEN) {
-      // good :)
-    } else {
-      die('ERROR_INVALID_TOKEN');
-    }
-
-    if ((!isset($_GET['storetype']) || $_GET['storetype'] == 'target') && $this->getAction() == 'checkbridge') {
+    if (((!isset($_GET['storetype']) || $_GET['storetype'] == 'target') && $this->getAction() == 'checkbridge') || !isset($_GET['action'])) {
 
       if (trim($this->config->imagesDir) != "") {
         if (!file_exists(M1_STORE_BASE_DIR . $this->config->imagesDir) && is_writable(M1_STORE_BASE_DIR)) {
@@ -3319,7 +4059,7 @@ class M1_Bridge
         }
 
         if (!$this->isWritable(M1_STORE_BASE_DIR . $this->config->imagesDir)) {
-          die('ERROR_NO_IMAGES_DIR '.M1_STORE_BASE_DIR . $this->config->imagesDir);
+          die('ERROR_NO_IMAGES_DIR '. M1_STORE_BASE_DIR . $this->config->imagesDir);
         }
       }
 
@@ -3331,7 +4071,7 @@ class M1_Bridge
         }
 
         if (!$this->isWritable(M1_STORE_BASE_DIR . $this->config->categoriesImagesDir)) {
-          die('ERROR_NO_IMAGES_DIR '.M1_STORE_BASE_DIR . $this->config->categoriesImagesDir);
+          die('ERROR_NO_IMAGES_DIR '. M1_STORE_BASE_DIR . $this->config->categoriesImagesDir);
         }
       }
 
@@ -3343,7 +4083,7 @@ class M1_Bridge
         }
 
         if (!$this->isWritable(M1_STORE_BASE_DIR . $this->config->productsImagesDir)) {
-          die('ERROR_NO_IMAGES_DIR '.M1_STORE_BASE_DIR . $this->config->productsImagesDir);
+          die('ERROR_NO_IMAGES_DIR '. M1_STORE_BASE_DIR . $this->config->productsImagesDir);
         }
       }
 
@@ -3355,11 +4095,22 @@ class M1_Bridge
         }
 
         if (!$this->isWritable(M1_STORE_BASE_DIR . $this->config->manufacturersImagesDir)) {
-          die('ERROR_NO_IMAGES_DIR '.M1_STORE_BASE_DIR . $this->config->manufacturersImagesDir);
+          die('ERROR_NO_IMAGES_DIR ' . M1_STORE_BASE_DIR . $this->config->manufacturersImagesDir);
         }
       }
     }
+
+    if (isset($_GET['token'])) {
+      if ($_GET['token'] === M1_TOKEN) {
+        // good :)
+      } else {
+        die('ERROR_INVALID_TOKEN');
+      }
+    } else{
+      die('BRIDGE INSTALLED.<br /> Version: ' . M1_BRIDGE_VERSION );
+    }
   }
+
 }
 
 
@@ -3372,9 +4123,9 @@ class M1_Bridge
 
 class M1_Mysql
 {
-  var $config = null; // config adapter
-  var $result = array();
-  var $dataBaseHandle = null;
+  public $config = null; // config adapter
+  public $result = array();
+  public $dataBaseHandle = null;
 
   /**
    * mysql constructor
@@ -3382,7 +4133,7 @@ class M1_Mysql
    * @param M1_Config_Adapter $config
    * @return M1_Mysql
    */
-  function M1_Mysql($config)
+  public function __construct($config)
   {
     $this->config = $config;
   }
@@ -3390,7 +4141,7 @@ class M1_Mysql
   /**
    * @return bool|null|resource
    */
-  function getDataBaseHandle()
+  private function getDataBaseHandle()
   {
     if ($this->dataBaseHandle) {
       return $this->dataBaseHandle;
@@ -3408,26 +4159,26 @@ class M1_Mysql
   /**
    * @return bool|null|resource
    */
-  function connect()
+  private function connect()
   {
     $triesCount = 10;
     $link = null;
-    $host = $this->config->Host . ($this->config->Port ? ':' . $this->config->Port : '');
-    $password = stripslashes($this->config->Password);
+    $host = $this->config->host . ($this->config->port ? ':' . $this->config->port : '');
+    $password = stripslashes($this->config->password);
 
     while (!$link) {
       if (!$triesCount--) {
         break;
       }
 
-      $link = @mysql_connect($host, $this->config->Username, $password);
+      $link = @mysql_connect($host, $this->config->username, $password);
       if (!$link) {
         sleep(5);
       }
     }
 
     if ($link) {
-      mysql_select_db($this->config->Dbname, $link);
+      mysql_select_db($this->config->dbname, $link);
     } else {
       return false;
     }
@@ -3440,7 +4191,7 @@ class M1_Mysql
    *
    * @return array
    */
-  function localQuery($sql)
+  public function localQuery($sql)
   {
     $result = array();
     $dataBaseHandle = $this->getDataBaseHandle();
@@ -3464,7 +4215,7 @@ class M1_Mysql
    *
    * @return array
    */
-  function query($sql, $fetchType)
+  public function query($sql, $fetchType)
   {
     $result = array(
       'result'  => null,
@@ -3560,7 +4311,7 @@ class M1_Mysql
   /**
    * @return int
    */
-  function getLastInsertId()
+  public function getLastInsertId()
   {
     return mysql_insert_id($this->dataBaseHandle);
   }
@@ -3568,7 +4319,7 @@ class M1_Mysql
   /**
    * @return int
    */
-  function getAffectedRows()
+  public function getAffectedRows()
   {
     return mysql_affected_rows($this->dataBaseHandle);
   }
@@ -3576,7 +4327,7 @@ class M1_Mysql
   /**
    * @return void
    */
-  function __destruct()
+  public function __destruct()
   {
     if ($this->dataBaseHandle) {
       mysql_close($this->dataBaseHandle);
@@ -3584,6 +4335,7 @@ class M1_Mysql
 
     $this->dataBaseHandle = null;
   }
+
 }
 
 
@@ -3596,12 +4348,12 @@ class M1_Mysql
 
 class M1_Pdo
 {
-  var $config = null; // config adapter
-  var $noResult = array('delete', 'update', 'move', 'truncate', 'insert', 'set', 'create', 'drop');
-  var $dataBaseHandle = null;
+  public $config = null; // config adapter
+  public $noResult = array('delete', 'update', 'move', 'truncate', 'insert', 'set', 'create', 'drop');
+  public $dataBaseHandle = null;
 
-  var $insertedId = 0;
-  var $affectedRows = 0;
+  private $_insertedId = 0;
+  private $_affectedRows = 0;
 
   /**
    * pdo constructor
@@ -3609,7 +4361,7 @@ class M1_Pdo
    * @param M1_Config_Adapter $config configuration
    * @return M1_Pdo
    */
-  function M1_Pdo($config)
+  public function __construct($config)
   {
     $this->config = $config;
   }
@@ -3617,7 +4369,7 @@ class M1_Pdo
   /**
    * @return bool|null|PDO
    */
-  function getDataBaseHandle()
+  private function getDataBaseHandle()
   {
     if ($this->dataBaseHandle) {
       return $this->dataBaseHandle;
@@ -3635,16 +4387,16 @@ class M1_Pdo
   /**
    * @return bool|PDO
    */
-  function connect()
+  private function connect()
   {
     $triesCount = 3;
-    $host = $this->config->Host . ($this->config->Port ? ':' . $this->config->Port : '');
-    $password = stripslashes($this->config->Password);
-    $dbName = $this->config->Dbname;
+    $host = $this->config->host . ($this->config->port ? ':' . $this->config->port : '');
+    $password = stripslashes($this->config->password);
+    $dbName = $this->config->dbname;
 
     while ($triesCount) {
       try {
-        $link = new PDO("mysql:host=$host; dbname=$dbName", $this->config->Username, $password);
+        $link = new PDO("mysql:host=$host; dbname=$dbName", $this->config->username, $password);
         $link->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         return $link;
@@ -3653,7 +4405,7 @@ class M1_Pdo
         $triesCount--;
 
         // fix invalid port
-        $host = $this->config->Host;
+        $host = $this->config->host;
       }
     }
     return false;
@@ -3664,7 +4416,7 @@ class M1_Pdo
    *
    * @return array|bool
    */
-  function localQuery($sql)
+  public function localQuery($sql)
   {
     $result = array();
     $dataBaseHandle = $this->getDataBaseHandle();
@@ -3690,7 +4442,7 @@ class M1_Pdo
    *
    * @return array
    */
-  function query($sql, $fetchType)
+  public function query($sql, $fetchType)
   {
     $result = array(
       'result'        => null,
@@ -3725,8 +4477,8 @@ class M1_Pdo
 
     try {
       $res = $dataBaseHandle->query($sql);
-      $this->affectedRows = $res->rowCount();
-      $this->insertedId = $dataBaseHandle->lastInsertId();
+      $this->_affectedRows = $res->rowCount();
+      $this->_insertedId = $dataBaseHandle->lastInsertId();
     } catch (PDOException $e) {
       $result['message'] = '[ERROR] Mysql Query Error: ' . $e->getCode() . ', ' . $e->getMessage();
       return $result;
@@ -3758,31 +4510,31 @@ class M1_Pdo
   /**
    * @return string|int
    */
-  function getLastInsertId()
+  public function getLastInsertId()
   {
-    return $this->insertedId;
+    return $this->_insertedId;
   }
 
   /**
    * @return int
    */
-  function getAffectedRows()
+  public function getAffectedRows()
   {
-    return $this->affectedRows;
+    return $this->_affectedRows;
   }
 
   /**
    * @return  void
    */
-  function __destruct()
+  public function __destruct()
   {
     $this->dataBaseHandle = null;
   }
 }
 
 
-define('M1_BRIDGE_VERSION', '21');
-
+define('M1_BRIDGE_VERSION', '25');
+define('M1_BRIDGE_DOWNLOAD_LINK', 'https://api.api2cart.com/v1.0/bridge.download.file?update');
 define('M1_BRIDGE_DIRECTORY_NAME', basename(getcwd()));
 
 ini_set('display_errors', 1);
@@ -3794,11 +4546,31 @@ if (substr(phpversion(), 0, 1) == 5) {
 
 require_once 'config.php';
 
-function stripslashes_array($array) {
+/**
+ * @param $array
+ * @return array|string|stripslashes_array
+ */
+function stripslashes_array($array)
+{
   return is_array($array) ? array_map('stripslashes_array', $array) : stripslashes($array);
 }
 
-function getPHPExecutable() {
+function exceptions_error_handler($severity, $message, $filename, $lineno) {
+  if (error_reporting() == 0) {
+    return;
+  }
+  if (error_reporting() & $severity) {
+    throw new ErrorException($message, 0, $severity, $filename, $lineno);
+  }
+}
+
+set_error_handler('exceptions_error_handler');
+
+/**
+ * @return bool|mixed|string
+ */
+function getPHPExecutable()
+{
   $paths = explode(PATH_SEPARATOR, getenv('PATH'));
   $paths[] = PHP_BINDIR;
   foreach ($paths as $path) {
@@ -3815,8 +4587,7 @@ function getPHPExecutable() {
   return false;
 }
 
-if (!isset($_SERVER))
-{
+if (!isset($_SERVER)) {
    $_GET      = &$HTTP_GET_VARS;
    $_POST     = &$HTTP_POST_VARS;
    $_ENV      = &$HTTP_ENV_VARS;
@@ -3835,7 +4606,7 @@ if (get_magic_quotes_gpc()) {
 
 if (isset($_SERVER['SCRIPT_FILENAME'])) {
   $scriptPath = $_SERVER['SCRIPT_FILENAME'];
-  if ( isset($_SERVER['PATH_TRANSLATED'])  && $_SERVER['PATH_TRANSLATED'] != "" ) {
+  if (isset($_SERVER['PATH_TRANSLATED']) && $_SERVER['PATH_TRANSLATED'] != "" ) {
     $scriptPath = $_SERVER['PATH_TRANSLATED'];
   }
   define("M1_STORE_BASE_DIR", preg_replace('/[^\/\\\]*[\/\\\][^\/\\\]*$/', '', $scriptPath));

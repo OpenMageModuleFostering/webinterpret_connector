@@ -3,7 +3,7 @@
     "type": "magento-module",
     "license": "OSL-v3.0",
     "homepage": "",
-    "description": "Integrate Magento with Webinterpret.",
+    "description": "Webinterpret integration for Magento",
     "authors": [
     {
         "name": "Webinterpret",

@@ -180,10 +180,11 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function isUserNotAllowSaveCookie()
     {
-        if (class_exists('Mage_Core_Helper_Cookie')) {
-            return Mage::helper('core/cookie')->isUserNotAllowSaveCookie();
+        if (Mage::getVersion() < '1.7.0.0') {
+            return false;
         }
-        return false;
+
+        return Mage::helper('core/cookie')->isUserNotAllowSaveCookie();
     }
 
     public function getMagentoVersionString()
@@ -461,54 +462,6 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
     public function getExtensionVersion()
     {
         return (string) Mage::getConfig()->getNode()->modules->Webinterpret_Connector->version;
-    }
-
-    /**
-     * @return bool
-     * @throws \Exception
-     */
-    public function verifyRequest() {
-        if (!function_exists( 'openssl_verify')) {
-            throw new \Exception('OpenSSL is required.');
-        }
-
-        $requestId = $_SERVER['HTTP_WEBINTERPRET_REQUEST_ID'];
-        $signature = $_SERVER['HTTP_WEBINTERPRET_SIGNATURE'];
-        $signature = base64_decode( $signature );
-
-        $version = $_SERVER['HTTP_WEBINTERPRET_SIGNATURE_VERSION'];
-        if (empty( $version )) {
-            $version = 1;
-        }
-
-        // Data
-        $data = $requestId;
-        if ($version == 2) {
-            // Query data
-            $queryArray = $_GET;
-            ksort($queryArray);
-            $queryData = serialize($queryArray);
-
-            // Post data
-            $postData = $_POST;
-            ksort($postData);
-            $postData = serialize($postData);
-
-            $data = $requestId . $queryData . $postData;
-        }
-
-        // Verify signature
-        $public_key = Mage::getStoreConfig('webinterpret_connector/public_key');
-        $ok         = openssl_verify($data, $signature, $public_key, OPENSSL_ALGO_SHA1);
-
-        if ($ok == 1) {
-            return true;
-        }
-        if ($ok == 0) {
-            throw new \Exception('Incorrect signature.');
-        }
-
-        throw new \Exception('Error checking signature');
     }
 
     public function getGeoip2DbPath()

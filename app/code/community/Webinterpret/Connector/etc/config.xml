@@ -8,7 +8,7 @@
 <config>
     <modules>
         <Webinterpret_Connector>
-            <version>1.3.1.1</version>
+            <version>1.3.4.0</version>
         </Webinterpret_Connector>
     </modules>
     <global>
@@ -64,11 +64,20 @@
                     </webinterpret_catalog_controller_product_init>
                 </observers>
             </catalog_controller_product_init>
+            <controller_front_init_before>
+                <observers>
+                    <webinterpret_controller_front_init_before>
+                        <type>object</type>
+                        <class>Webinterpret_Connector_Helper_Autoloader</class>
+                        <method>createAndRegister</method>
+                    </webinterpret_controller_front_init_before>
+                </observers>
+            </controller_front_init_before>
         </events>
         <request>
             <direct_front_name>
-                <webinterpret_connector />
-                <glopal />
+                <webinterpret_connector/>
+                <glopal/>
             </direct_front_name>
         </request>
         <rewrite>
@@ -128,20 +137,20 @@
             <automatic_updates_enabled><![CDATA[1]]></automatic_updates_enabled>
             <store_extender_enabled><![CDATA[0]]></store_extender_enabled>
             <store_extender_url><![CDATA[https://wi-ws-store-ext.glopal.com/index.php]]></store_extender_url>
-            <public_key>-----BEGIN PUBLIC KEY-----
-                MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA6YW1LitbxWceRjvGZnwd
-                h7/NH0Gbmnt+jEpC99KJuu4wPV+AyByUV3KxOwo6fUWozsts2tSgg3hgxnTEwjwF
-                XqFdft5pE794YLRtYnBMaMYkcAyl9nZTYimKT+fz+MfKceMIkFmvOVh8IMPjHLV+
-                7GOjBnrUxUl2/z/ohE9wUyxhP7Zo4HpHNDyDsHCBpANWVoRs9n5sBBb4cnBVIXBl
-                AJuWmf5c0NkMim6Sj5mM3fKb0vDhykU9IXIbQMn5cw5+g4Qy6ldcrXNm+M3+4JzW
-                XGqwtKrXbKLJTlA+H57szT4wYOBT1HGeDD9vFDOwTq2AjNN3mcOJawMbkiZ3sJG3
-                /rHMptZtE6ToMbdC/PW2neLcalpgclxafoSoD9byIYA3qWYN3GAEDGJa4UHIcZpv
-                nUxdL5qUgJAz2q/rk7blCSIRwLv85jQtArlfsdoxp3F3iaahjz9sB/VX1xZ6YOJH
-                uZGGd1aUimDOAgVfmqeFOvTEBQFYTpGg9W7TyMIqvfAqPUtOxDmzB6fNxPd45W3s
-                azayJumvfHBOs53t6fI/a52CfQ2I4jaz3eHI0hpHyZVxvsAj5NbFXBYzQ+mOoTEa
-                38d6cBHbci6rLRJ0PdaP6ZABz9OI3UE8VCz5n5BZEJ0QWmXmnn2YnWq8p3Si53KK
-                tQMgSP58oPZ6Nq6qM6KrlmkCAwEAAQ==
-                -----END PUBLIC KEY-----</public_key>
+            <public_key><![CDATA[-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA6YW1LitbxWceRjvGZnwd
+h7/NH0Gbmnt+jEpC99KJuu4wPV+AyByUV3KxOwo6fUWozsts2tSgg3hgxnTEwjwF
+XqFdft5pE794YLRtYnBMaMYkcAyl9nZTYimKT+fz+MfKceMIkFmvOVh8IMPjHLV+
+7GOjBnrUxUl2/z/ohE9wUyxhP7Zo4HpHNDyDsHCBpANWVoRs9n5sBBb4cnBVIXBl
+AJuWmf5c0NkMim6Sj5mM3fKb0vDhykU9IXIbQMn5cw5+g4Qy6ldcrXNm+M3+4JzW
+XGqwtKrXbKLJTlA+H57szT4wYOBT1HGeDD9vFDOwTq2AjNN3mcOJawMbkiZ3sJG3
+/rHMptZtE6ToMbdC/PW2neLcalpgclxafoSoD9byIYA3qWYN3GAEDGJa4UHIcZpv
+nUxdL5qUgJAz2q/rk7blCSIRwLv85jQtArlfsdoxp3F3iaahjz9sB/VX1xZ6YOJH
+uZGGd1aUimDOAgVfmqeFOvTEBQFYTpGg9W7TyMIqvfAqPUtOxDmzB6fNxPd45W3s
+azayJumvfHBOs53t6fI/a52CfQ2I4jaz3eHI0hpHyZVxvsAj5NbFXBYzQ+mOoTEa
+38d6cBHbci6rLRJ0PdaP6ZABz9OI3UE8VCz5n5BZEJ0QWmXmnn2YnWq8p3Si53KK
+tQMgSP58oPZ6Nq6qM6KrlmkCAwEAAQ==
+-----END PUBLIC KEY-----]]></public_key>
             <inventory_manager_url><![CDATA[https://d1f68rsmoq5ae3.cloudfront.net]]></inventory_manager_url>
             <backend_redirector_enabled><![CDATA[0]]></backend_redirector_enabled>
         </webinterpret_connector>
