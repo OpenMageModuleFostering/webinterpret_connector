@@ -51,14 +51,14 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
 
             if ($method == 'stream') {
                 $ctx = stream_context_create(array(
-                    'http'=>
-                        array(
-                            'timeout' => $timeout,
-                        ),
-                    'https'=>
-                        array(
-                            'timeout' => $timeout,
-                        ),
+                        'http' =>
+                            array(
+                                'timeout' => $timeout,
+                            ),
+                        'https' =>
+                            array(
+                                'timeout' => $timeout,
+                            ),
                     )
                 );
                 $contents = @file_get_contents($url, false, $ctx);
@@ -102,10 +102,10 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
     public function getEnvConfig()
     {
         foreach (array(
-            __DIR__ . '/../etc/env.ini',
-            __DIR__ . '/../../../../../../../env.ini',
-            __DIR__ . '/../../../../../../../env.ini.example',
-        ) as $path) {
+                     __DIR__ . '/../etc/env.ini',
+                     __DIR__ . '/../../../../../../../env.ini',
+                     __DIR__ . '/../../../../../../../env.ini.example',
+                 ) as $path) {
             if (is_readable($path)) {
                 return parse_ini_file($path);
             }
@@ -160,6 +160,67 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
     {
         $env = $this->getEnvConfig();
         return Mage::getStoreConfig('webinterpret_connector/remote_assets_url') ?: $env['REMOTE_ASSETS_URL'];
+    }
+
+    public function getPluginRegisterUrl()
+    {
+        $env = $this->getEnvConfig();
+        return $env['PLUGIN_REGISTER_URL'];
+    }
+
+    public function getPluginIsRegisteredUrl()
+    {
+        $env = $this->getEnvConfig();
+        return $env['PLUGIN_IS_REGISTERED_URL'];
+    }
+
+    public function getRegisterFormData()
+    {
+        $user = Mage::getSingleton('admin/session');
+        $store_key = Mage::getStoreConfig('webinterpret_connector/key');
+        // generate store key if necessary
+        if ($store_key === '') {
+            $store_key = md5(uniqid(mt_rand(), true));
+            Mage::getConfig()->saveConfig('webinterpret_connector/key', $store_key);
+            Mage::getConfig()->reinit();
+        }
+        return array(
+            'plugin_register_url' => $this->getPluginRegisterUrl(),
+            'store_key' => $store_key,
+            'firstname' => $user->getUser()->getFirstname(),
+            'lastname' => $user->getUser()->getLastname(),
+            'email' => $user->getUser()->getEmail(),
+            'url' => $this->getStoreBaseUrl(),
+            'platform' => 'magento',
+            'success_url' => Mage::helper('core/url')->getCurrentUrl(),
+        );
+    }
+
+    public function isStoreRegistered()
+    {
+        $registered_site_url = Mage::getStoreConfig('webinterpret_connector/registered_site_url');
+        $site_url = $this->getStoreBaseUrl();
+
+        if ($registered_site_url === $site_url) {
+            return true;
+        }
+
+        $request_url = $this->getPluginIsRegisteredUrl() . '?' . http_build_query(array('url' => $site_url));
+
+        $ch = curl_init();
+        curl_setopt_array($ch, array(
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_URL => $request_url
+        ));
+        $response_body = curl_exec($ch);
+        curl_close($ch);
+
+        if ($response_body != '' && true === json_decode($response_body)) {
+            Mage::getConfig()->saveConfig('webinterpret_connector/registered_site_url', $site_url);
+            Mage::getConfig()->reinit();
+            return true;
+        }
+        return false;
     }
 
     public function isSignatureVerificationEnabled()
@@ -428,11 +489,13 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
                             @chmod($path, 0664);
                         }
                         if (!is_writeable($path)) {
-                            $report['extension_files']['errors'][] = $this->__("File is not writable: %s<br>Please update the file permissions.", $path);
+                            $report['extension_files']['errors'][] = $this->__("File is not writable: %s<br>Please update the file permissions.",
+                                $path);
                         }
                     }
                 } else {
-                    $report['extension_files']['errors'][] = $this->__("File is missing: %s<br>Please upload the file or reinstall this extension using Magento Connect Manager.", $path);
+                    $report['extension_files']['errors'][] = $this->__("File is missing: %s<br>Please upload the file or reinstall this extension using Magento Connect Manager.",
+                        $path);
                 }
             }
 
@@ -443,7 +506,8 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
                         @chmod($path, 0775);
                     }
                     if (!is_writeable($path)) {
-                        $report['extension_files']['errors'][] = $this->__("Directory is not writable: %s<br>Please update the file permissions.", $path);
+                        $report['extension_files']['errors'][] = $this->__("Directory is not writable: %s<br>Please update the file permissions.",
+                            $path);
                     }
                 }
             }
@@ -457,6 +521,6 @@ class Webinterpret_Connector_Helper_Data extends Mage_Core_Helper_Abstract
 
     public function getExtensionVersion()
     {
-        return (string) Mage::getConfig()->getNode()->modules->Webinterpret_Connector->version;
+        return (string)Mage::getConfig()->getNode()->modules->Webinterpret_Connector->version;
     }
 }

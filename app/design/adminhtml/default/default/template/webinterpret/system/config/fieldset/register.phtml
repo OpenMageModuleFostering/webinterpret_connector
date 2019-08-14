@@ -1,0 +1,27 @@
+<?php
+/**
+ * @see Webinterpret_Connector_Block_Adminhtml_System_Config_Fieldset_Register
+ */
+
+$vars = Mage::helper('webinterpret_connector')->getRegisterFormData();
+$path = $vars['plugin_register_url'];
+unset($vars['plugin_register_url']);
+$query = http_build_query( $vars );
+?>
+<div id="register-error" class="error" style="display: none">
+    <p>Failed to connect to Webinterpret Onboarding, please try again later</p>
+</div>
+<iframe id="register-iframe" src="<?php echo $path . '?' . $query ?>" style="margin-top: 20px; width: calc(100% - 20px); min-height: 1050px; height: calc(100vh - 125px)" scrolling="no" name="internal" onload="resizeIframe(this)"></iframe>
+
+<script>
+    var xhr = new XMLHttpRequest;
+    xhr.open('HEAD', '<?php echo $path ?>', true);
+    xhr.onload = function () {
+        if (xhr.status !== 200) xhr.onerror();
+    };
+    xhr.onerror = function () {
+        document.getElementById('register-error').style.display = 'block';
+        document.getElementById('register-iframe').style.display = 'none';
+    };
+    xhr.send(null);
+</script>

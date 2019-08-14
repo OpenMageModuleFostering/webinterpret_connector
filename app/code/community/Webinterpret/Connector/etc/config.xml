@@ -8,7 +8,7 @@
 <config>
     <modules>
         <Webinterpret_Connector>
-            <version>1.4.0.0</version>
+            <version>1.5.0.0</version>
         </Webinterpret_Connector>
     </modules>
     <global>
@@ -97,6 +97,7 @@
             <footer_enabled>1</footer_enabled>
             <footer/>
             <tracking_code/>
+            <registered_site_url/>
             <plugin_id/>
             <head/>
             <installation_mode>1</installation_mode>
