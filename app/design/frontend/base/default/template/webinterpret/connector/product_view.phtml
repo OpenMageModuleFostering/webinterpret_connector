@@ -1,0 +1,24 @@
+<?php
+/**
+ *
+ * @category   Webinterpret
+ * @package    Webinterpret_Connector
+ * @author     Webinterpret Team <info@webinterpret.com>
+ * @license    http://opensource.org/licenses/osl-3.0.php
+ */
+?>
+<?php if (Mage::helper('webinterpret_connector')->isEnabled()): ?>
+<!-- webinterpret_product_view -->
+<?php if (!Mage::helper('webinterpret_connector')->isUserNotAllowSaveCookie()): ?>
+<script>
+//<![CDATA[
+var _webinterpret = _webinterpret || {};
+_webinterpret.plugin_version = '<?php echo $this->getPluginVersion() ?>';
+_webinterpret.store_locale = '<?php echo $this->getLocaleCode() ?>';
+_webinterpret.store_url = '<?php echo $this->getStoreUrl() ?>';
+_webinterpret.product_id = '<?php echo $this->getProductId() ?>';
+//]]>
+</script>
+<?php endif; ?>
+<!-- end webinterpret_product_view -->
+<?php endif; ?>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    @category   Webinterpret
+    @package    Webinterpret_Connector
+    @author     Webinterpret Team <info@webinterpret.com>
+    @license    http://opensource.org/licenses/osl-3.0.php
+-->
+<config>
+    <acl>
+        <resources>
+            <admin>
+                <children>
+                    <system>
+                        <children>
+                            <config>
+                                <children>
+                                    <webinterpret_connector translate="title">
+                                        <title>Webinterpret</title>
+                                    </webinterpret_connector>
+                                </children>
+                            </config>
+                        </children>
+                    </system>
+                </children>
+            </admin>
+        </resources>
+    </acl>
+</config>

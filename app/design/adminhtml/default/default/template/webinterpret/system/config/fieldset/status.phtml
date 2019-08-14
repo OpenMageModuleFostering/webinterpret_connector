@@ -1,0 +1,65 @@
+<?php
+/**
+ * @see Webinterpret_Connector_Block_Adminhtml_System_Config_Fieldset_Status
+ */
+?>
+<style>
+p.webinterpret-test-connection {
+    margin-top: 10px;
+}
+table.webinterpret-status {
+    padding: 0;
+    margin: 0;
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 10px;
+}
+table.webinterpret-status th,
+table.webinterpret-status td {
+    border: 1px solid #ccc;
+    padding: 5px;
+    margin: 0;
+}
+table.webinterpret-status td.pass {
+    color: #3c763d;
+    background-color: #dff0d8;
+    font-weight: bold;
+}
+table.webinterpret-status td.fail {
+    color: #a94442;
+    background-color: #f2dede;
+    font-weight: bold;
+}
+table.webinterpret-status td p.error {
+    margin: 0;
+}
+</style>
+<?php
+$report = Mage::helper('webinterpret_connector')->selfTest();
+?>
+<table class="webinterpret-status">
+    <tr>
+        <th width="120px"><?php echo $this->__('Component'); ?></th>
+        <th width="60px"><?php echo $this->__('Status'); ?></th>
+        <th><?php echo $this->__('Details'); ?></th>
+    </tr>
+
+    <?php foreach ($report as $component): ?>
+    <tr>
+        <td><?php echo $component['label']; ?></td>
+        <?php if (isset($component['errors']) && count($component['errors']) > 0): ?>
+        <td class="fail">Fail</td>
+        <td>
+        <?php foreach ($component['errors'] as $error): ?>
+            <?php echo "<p class=\"error\">" . $error . "</p>"; ?>
+        <?php endforeach; ?>
+        </td>
+        <?php else: ?>
+        <td class="pass">Pass</td>
+        <td><?php echo $component['info']; ?></td>
+        <?php endif; ?>
+    </tr>
+    <?php endforeach; ?>
+
+</table>
+<p class="webinterpret-test-connection"><a href="<?php echo $this->getRemoteTestUrl(); ?>" target="_blank">Test Connection</a></p>

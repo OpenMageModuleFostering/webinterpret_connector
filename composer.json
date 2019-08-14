@@ -1,0 +1,16 @@
+{
+    "name": "OpenMageModuleFostering/Webinterpret_Connector",
+    "type": "magento-module",
+    "license": "OSL-v3.0",
+    "homepage": "",
+    "description": "Integrate Magento with Webinterpret.",
+    "authors": [
+    {
+        "name": "Webinterpret",
+        "email": "info@webinterpret.com"
+    }
+],
+    "suggest": {
+        "magento-hackathon/magento-composer-installer": "*"
+    }
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Webinterpret_Connector>
+            <active>true</active>
+            <codePool>community</codePool>
+        </Webinterpret_Connector>
+    </modules>
+</config>

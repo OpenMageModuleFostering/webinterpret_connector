@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!--
+    @category   Webinterpret
+    @package    Webinterpret_Connector
+    @author     Webinterpret Team <info@webinterpret.com>
+    @license    http://opensource.org/licenses/osl-3.0.php
+-->
+<layout version="0.1.0">
+
+<!--
+Default layout, loads most of the pages
+-->
+
+    <default>
+
+        <!-- Header -->
+        <reference name="head">
+            <block type="webinterpret_connector/head" after="-" name="webinterpret_connector_head" as="wi_head" template="webinterpret/connector/head.phtml" />
+            <block type="core/text" name="webinterpret_connector_remote_assets_head">
+                <action method="setText">
+                    <text>
+                        <![CDATA[<script type="text/javascript" src="//d2leqgr9fez74i.cloudfront.net/common/js/webinterpret-loader.js"></script>]]>
+                    </text>
+                </action>
+            </block>
+        </reference>
+
+        <!-- Footer -->
+        <reference name="before_body_end">
+            <block type="webinterpret_connector/footer" after="-" name="webinterpret_connector_footer" as="wi_footer" template="webinterpret/connector/footer.phtml" />
+        </reference>
+
+    </default>
+
+<!--
+Product view
+-->
+
+    <catalog_product_view translate="label">
+
+        <!-- Product Redirect -->
+        <reference name="before_body_end">
+            <block type="webinterpret_connector/product_view" name="webinterpret_connector_product_view" as="wi_product_view" template="webinterpret/connector/product_view.phtml" />
+        </reference>
+
+    </catalog_product_view>
+
+</layout>

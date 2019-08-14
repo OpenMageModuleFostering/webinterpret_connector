@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!--
+    @category   Webinterpret
+    @package    Webinterpret_Connector
+    @author     Webinterpret Team <info@webinterpret.com>
+    @license    http://opensource.org/licenses/osl-3.0.php
+-->
+<layout version="0.1.0">
+    <default>
+        <reference name="notifications">
+            <block type="webinterpret_connector/adminhtml_notifications" name="webinterpret_connector_notifications" />
+        </reference>
+    </default>
+</layout>
